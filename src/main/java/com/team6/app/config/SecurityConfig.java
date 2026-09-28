@@ -41,6 +41,8 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/**", "/actuator/health", "/error").permitAll()
+                        // 인증사진 정적 서빙 (workout 도메인, A파트)
+                        .requestMatchers(HttpMethod.GET, "/photos/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/workouts/**", "/users/*/workouts", "/rankings/**").permitAll()
                         .anyRequest().authenticated())
                 // Authorization: Bearer <token> 헤더를 검증하고 Jwt를 인증 주체로 등록함

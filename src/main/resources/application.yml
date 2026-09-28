@@ -6,6 +6,8 @@ app:
   jwt:
     secret: ${JWT_SECRET}
     expiration-seconds: 3600
+  # prod 프로필(application-prod.yml)에서 /app/uploads로 덮어씀. 로컬 실행 시 기본값
+  upload-dir: ./uploads
 
 management:
   endpoints:

@@ -42,6 +42,43 @@ curl -s -H 'Authorization: Bearer <accessToken>' http://localhost:8080/users/me
 
 - 토큰 유효 시간은 1시간이고, `.env`의 `JWT_SECRET`(32바이트 이상)으로 서명함
 - 컨트롤러에서 로그인 사용자 ID는 `@AuthenticationPrincipal Jwt jwt`로 받아 `Long.valueOf(jwt.getSubject())`로 꺼냄
+
+## 운동 기록
+
+| 기능 | Method | URL | 인증 |
+|---|---|---|---|
+| 기록 등록 | POST | /workouts | 필요 |
+| 기록 상세 | GET | /workouts/{id} | 불필요 |
+| 특정 사용자 기록 목록 | GET | /users/{id}/workouts?page=0 | 불필요 |
+| 기록 삭제 | DELETE | /workouts/{id} | 필요 (작성자만) |
+| 인증사진 첨부 (선택) | POST | /workouts/{id}/photos | 필요 (작성자만) |
+
+```bash
+TOKEN=<accessToken>
+
+# 기록 등록
+curl -s -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  -d '{"type":"CARDIO","durationMin":40,"distanceKm":5.2,"memo":"한강 러닝","workoutDate":"2026-09-28"}' \
+  http://localhost:8080/workouts
+
+# 기록 상세 / 목록 (인증 불필요)
+curl -s http://localhost:8080/workouts/1
+curl -s "http://localhost:8080/users/1/workouts?page=0"
+
+# 인증사진 첨부 (multipart part 이름: photo, 최대 5MB, JPG/PNG/WEBP)
+curl -s -H "Authorization: Bearer $TOKEN" \
+  -F "photo=@/path/to/photo.jpg;type=image/jpeg" \
+  http://localhost:8080/workouts/1/photos
+# → {"photoUrl":"/photos/<storedKey>","storedKey":"..."} , 이후 GET http://localhost:8080/photos/<storedKey>로 조회
+
+# 기록 삭제 (작성자만, 사진도 함께 삭제됨)
+curl -s -X DELETE -H "Authorization: Bearer $TOKEN" http://localhost:8080/workouts/1
+```
+
+- `type`은 `CARDIO`(유산소) / `STRENGTH`(무산소)이고, `distanceKm`은 유산소일 때만 선택 입력함
+- `durationMin`(1~300)이 주간 통계·주간 랭킹 점수 계산의 공통 기준값임
+- 기록 등록 시 `rankingService.addScore(...)`, 삭제 시 `rankingService.subtractScore(...)`를 호출해 주간 랭킹에 반영함 (`subtractScore`는 A 파트에서 추가)
+- `WorkoutRepository.sumMinutesByDate(userId, start, end)`가 사용자 주간 날짜별 운동시간 합계를 반환함. 주간 통계에서 이 쿼리를 재사용하면 됨
 - 인증 없이 허용하는 경로는 `config/SecurityConfig.java`에서 관리함
 
 ## 팔로우 + 피드 (B)
@@ -59,7 +96,7 @@ curl -s -H 'Authorization: Bearer <accessToken>' 'http://localhost:8080/feed?pag
 
 - `follows` 테이블의 `(follower_id, followee_id)` 유일 제약으로 중복 팔로우를 막음
 - 피드는 작성자를 함께 조회(join fetch)해 20건이어도 쿼리 1번으로 가져옴
-- `workout/Workout`, `workout/WorkoutResponse` 는 피드에 필요한 최소 형태로 먼저 추가함 (A 파트에서 확장)
+- `workout/Workout`, `workout/WorkoutResponse` 는 B 파트가 먼저 최소 형태로 추가했고, A 파트(운동 기록)가 사진 첨부·랭킹 연동을 붙여 확장함
 
 ## 주간 랭킹 (Redis)
 

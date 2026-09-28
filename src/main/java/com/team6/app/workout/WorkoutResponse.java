@@ -16,6 +16,11 @@ public record WorkoutResponse(
         String photoUrl) {
 
     public static WorkoutResponse from(Workout workout) {
+        return from(workout, null);
+    }
+
+    // 사진 첨부(13번) 구현으로 photoUrl을 채워서 반환함 (A 파트)
+    public static WorkoutResponse from(Workout workout, String photoUrl) {
         return new WorkoutResponse(
                 workout.getId(),
                 workout.getUser().getId(),
@@ -25,6 +30,6 @@ public record WorkoutResponse(
                 workout.getDistanceKm(),
                 workout.getMemo(),
                 workout.getWorkoutDate(),
-                null);
+                photoUrl);
     }
 }
