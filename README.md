@@ -127,6 +127,26 @@ curl -s -H 'Authorization: Bearer <accessToken>' 'http://localhost:8080/feed?pag
 - 피드는 작성자를 함께 조회(join fetch)해 20건이어도 쿼리 1번으로 가져옴
 - `workout/Workout`, `workout/WorkoutResponse` 는 B 파트가 먼저 최소 형태로 추가했고, A 파트(운동 기록)가 사진 첨부·랭킹 연동을 붙여 확장함
 
+## 마이페이지
+
+| 기능 | Method | URL | 인증 | 응답 |
+|---|---|---|---|---|
+| 닉네임 수정 | PATCH | /users/me | 필요 | 200 `{id, email, nickname, photoUrl, joinedAt}`, 1~30자 아니면 400 |
+| 프로필 사진 올리기 · 바꾸기 | POST | /users/me/photo | 필요 | multipart `photo`, JPG/PNG/WEBP 5MB, 200 (위와 같은 형태) |
+| 프로필 사진 삭제 | DELETE | /users/me/photo | 필요 | 204 |
+| 운동 요약 | GET | /users/me/summary | 필요 | 200 `{totalCount, totalMinutes, weekCount, weekMinutes, weekRank, streakDays, byType:[{type, count, minutes}]}` |
+| 내 주간 통계 (11번) | GET | /users/me/stats/weekly?date= | 필요 | 200 `{week, start, end, workoutCount, totalMinutes, byType, days:[{date, minutes}] (월~일 7칸)}` |
+| 팔로워 · 팔로잉 목록 | GET | /users/{id}/followers, /users/{id}/followees | 필요 | 200 `[{id, nickname, photoUrl, following}]` 20명씩 |
+| 회원 탈퇴 | DELETE | /users/me | 필요 | 본문 `{password}`, 204, 비밀번호가 틀리면 400 |
+
+- 프로필 사진은 인증사진과 같은 `app.upload-dir`에 `profile_...` 키로 저장하고 `/photos/{key}`로 조회함. `users.profile_image_key` 컬럼 추가
+- 사진을 바꾸면 DB 커밋 뒤에 예전 파일을 지움 (저장 실패 시 예전 사진 유지)
+- `weekRank`는 주간 랭킹 Sorted Set의 순위(ZREVRANK + 1). 랭킹에 없거나 Redis 장애면 null이고 나머지 요약은 정상 응답
+- `streakDays`는 오늘(오늘 기록이 없으면 어제)부터 하루도 빠짐없이 기록한 날 수
+- 6번 `/users/{id}/workouts`에 `type=CARDIO|STRENGTH` 필터 추가 (생략하면 기존과 같음)
+- 회원 탈퇴는 한 트랜잭션에서 내 기록(남이 단 댓글 포함) · 인증사진 · 내가 쓴 댓글 · 팔로우 관계 · 계정을 삭제하고, 커밋 뒤에 사진 파일과 주간 랭킹(Redis) 점수를 정리함. 같은 이메일로 다시 가입 가능
+- 화면: http://localhost:8080/workouts.html#/me
+
 ## 주간 랭킹 (Redis)
 
 | 기능 | Method | URL | 인증 |

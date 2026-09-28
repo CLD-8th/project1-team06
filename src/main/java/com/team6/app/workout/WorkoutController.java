@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
@@ -42,8 +43,9 @@ public class WorkoutController {
 
     @GetMapping("/users/{userId}/workouts")
     public Page<WorkoutResponse> userWorkouts(@PathVariable Long userId,
+                                               @RequestParam(required = false) String type,
                                                @PageableDefault(size = 20) Pageable pageable) {
-        return workoutService.getUserWorkouts(userId, pageable);
+        return workoutService.getUserWorkouts(userId, type, pageable);
     }
 
     @DeleteMapping("/workouts/{id}")

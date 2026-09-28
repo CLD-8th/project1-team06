@@ -20,6 +20,10 @@ public interface WorkoutRepository extends JpaRepository<Workout, Long> {
     @EntityGraph(attributePaths = "user")
     Page<Workout> findByUser_IdOrderByIdDesc(Long userId, Pageable pageable);
 
+    // 6번 종류 필터 (마이페이지 탭)
+    @EntityGraph(attributePaths = "user")
+    Page<Workout> findByUser_IdAndTypeOrderByIdDesc(Long userId, String type, Pageable pageable);
+
     /**
      * 사용자의 주간 날짜별 운동시간 합계.
      * 주간 통계(C)가 사용하는 조회임. 기록이 없는 날짜는 행 자체가 없으니 호출 측에서 0으로 채워야 함.

@@ -4,9 +4,12 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Collection;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -57,6 +60,16 @@ public class WorkoutPhotoService {
     @Transactional(readOnly = true)
     public Optional<String> findPhotoUrl(Long workoutId) {
         return workoutPhotoRepository.findByWorkoutId(workoutId).map(p -> "/photos/" + p.getStoredKey());
+    }
+
+    // 목록 화면용. workoutId -> photoUrl. 사진이 없는 기록은 맵에 아예 안 들어있음
+    @Transactional(readOnly = true)
+    public Map<Long, String> findPhotoUrls(Collection<Long> workoutIds) {
+        if (workoutIds.isEmpty()) {
+            return Map.of();
+        }
+        return workoutPhotoRepository.findByWorkoutIdIn(workoutIds).stream()
+                .collect(Collectors.toMap(WorkoutPhoto::getWorkoutId, p -> "/photos/" + p.getStoredKey()));
     }
 
     private void deleteFileAndRow(WorkoutPhoto photo) {
