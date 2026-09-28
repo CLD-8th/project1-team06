@@ -96,7 +96,7 @@ curl -s -X POST -H 'Authorization: Bearer <accessToken>' http://localhost:8080/u
 curl -s -H 'Authorization: Bearer <accessToken>' 'http://localhost:8080/feed?page=0'
 ```
 
-- 화면 (오운공): http://localhost:8080/workouts.html — 관심 피드 · 사람 검색 · 프로필 · 팔로우 / 팔로우 취소 · 운동 기록 등록(사진) · 상세 · 삭제
+- 화면 (오운공): http://localhost:8080/workouts.html — 관심 피드 · 사람 검색 · 프로필 · 팔로우 / 팔로우 취소 · 운동 기록 등록(사진) · 상세 · 삭제 · 주간 랭킹
 - `follows` 테이블의 `(follower_id, followee_id)` 유일 제약으로 중복 팔로우를 막음
 - 피드는 작성자를 함께 조회(join fetch)해 20건이어도 쿼리 1번으로 가져옴
 - `workout/Workout`, `workout/WorkoutResponse` 는 B 파트가 먼저 최소 형태로 추가했고, A 파트(운동 기록)가 사진 첨부·랭킹 연동을 붙여 확장함
