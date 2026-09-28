@@ -81,6 +81,32 @@ curl -s -X DELETE -H "Authorization: Bearer $TOKEN" http://localhost:8080/workou
 - `WorkoutRepository.sumMinutesByDate(userId, start, end)`가 사용자 주간 날짜별 운동시간 합계를 반환함. 주간 통계에서 이 쿼리를 재사용하면 됨
 - 인증 없이 허용하는 경로는 `config/SecurityConfig.java`에서 관리함
 
+## 댓글
+
+| 기능 | Method | URL | 인증 |
+|---|---|---|---|
+| 댓글 등록 | POST | /workouts/{id}/comments | 필요 |
+| 댓글 목록 | GET | /workouts/{id}/comments | 불필요 |
+| 댓글 삭제 | DELETE | /comments/{id} | 필요 (작성자만) |
+
+```bash
+TOKEN=<accessToken>
+
+# 댓글 등록
+curl -s -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  -d '{"content":"오늘도 화이팅!"}' \
+  http://localhost:8080/workouts/1/comments
+
+# 댓글 목록 (인증 불필요, 오래된순)
+curl -s http://localhost:8080/workouts/1/comments
+
+# 댓글 삭제 (작성자만)
+curl -s -X DELETE -H "Authorization: Bearer $TOKEN" http://localhost:8080/comments/1
+```
+
+- 내용은 1~300자, 없는 기록에 달면 404
+- `GET /workouts/{id}/comments`는 `/workouts/**` GET 허용 규칙에 이미 걸려서 SecurityConfig를 따로 안 고쳤음
+
 ## 팔로우 + 피드 (B)
 
 | 기능 | Method | URL | 인증 | 응답 |
