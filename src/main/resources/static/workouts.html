@@ -90,7 +90,9 @@
   .btn:disabled, .btn-link:disabled { opacity: .45; cursor: default; }
   .btn.full { width: 100%; margin-top: 20px; padding: 13px; font-size: 15px; }
 
-  .auth { max-width: 380px; margin: min(12vh, 96px) auto 48px; padding: 36px 28px 28px; text-align: left; }
+  /* 로그인 화면이 보일 때만 화면 정중앙에 배치 (창 높이가 바뀌어도 가운데 유지) */
+  body:has(#auth:not([hidden])) { min-height: 100dvh; display: grid; place-items: center; padding: 24px 16px; }
+  .auth { width: min(380px, 100%); margin: 0; padding: 36px 28px 28px; text-align: left; animation: rise .45s var(--ease) both; }
   .auth .logo { display: block; font-size: 40px; margin-bottom: 28px; }
   .auth .logo::after { content: ""; display: block; width: 36px; height: 6px; margin-top: 10px; border-radius: 999px; background: var(--accent); }
   .auth .field { margin-bottom: 10px; }
