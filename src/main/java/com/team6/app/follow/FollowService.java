@@ -1,0 +1,57 @@
+package com.team6.app.follow;
+
+import com.team6.app.user.User;
+import com.team6.app.user.UserRepository;
+import com.team6.app.workout.WorkoutResponse;
+import java.util.List;
+import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+
+@Service
+@RequiredArgsConstructor
+public class FollowService {
+
+    private static final int FEED_SIZE = 20;
+
+    private final FollowRepository followRepository;
+    private final UserRepository userRepository;
+
+    @Transactional
+    public void follow(Long followerId, Long targetId) {
+        if (followerId.equals(targetId)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "자기 자신은 팔로우할 수 없습니다.");
+        }
+        User target = userRepository.findById(targetId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."));
+        if (followRepository.existsByFollowerIdAndFollowingId(followerId, targetId)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 팔로우 중입니다.");
+        }
+        // 확인과 저장 사이에 같은 요청이 끼어들면 유일 제약이 막으므로 그 경우도 중복으로 응답함
+        try {
+            followRepository.saveAndFlush(new Follow(userRepository.getReferenceById(followerId), target));
+        } catch (DataIntegrityViolationException e) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 팔로우 중입니다.");
+        }
+    }
+
+    // 팔로우하지 않은 상대여도 204로 응답함. 여러 번 눌러도 결과가 같음
+    @Transactional
+    public void unfollow(Long followerId, Long targetId) {
+        followRepository.deleteByPair(followerId, targetId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<WorkoutResponse> feed(Long userId, int page) {
+        if (page < 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "page는 0 이상이어야 합니다.");
+        }
+        return followRepository.findFeed(userId, PageRequest.of(page, FEED_SIZE)).stream()
+                .map(WorkoutResponse::from)
+                .toList();
+    }
+}
