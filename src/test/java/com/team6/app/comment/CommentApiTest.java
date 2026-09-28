@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.team6.app.ranking.RankingService;
 import com.team6.app.user.User;
 import com.team6.app.user.UserRepository;
 import com.team6.app.workout.Workout;
@@ -18,6 +19,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -39,6 +41,9 @@ class CommentApiTest {
     WorkoutRepository workoutRepository;
     @Autowired
     CommentRepository commentRepository;
+    // 실제 Redis 없이 돌리는 테스트라 랭킹 반영은 이 클래스의 관심사가 아님. 호출만 되면 충분함
+    @MockitoBean
+    RankingService rankingService;
 
     MockMvc mvc;
     User me;
@@ -114,5 +119,18 @@ class CommentApiTest {
         mvc.perform(delete("/comments/{id}", c.getId()).with(login(me)))
                 .andExpect(status().isForbidden());
         assertThat(commentRepository.existsById(c.getId())).isTrue();
+    }
+
+    // 댓글이 달린 기록도 삭제돼야 함 (comments.workout_id FK 때문에 댓글을 먼저 지워야 함)
+    @Test
+    void 댓글_달린_기록도_삭제_성공_204() throws Exception {
+        commentRepository.save(new Comment(workout, alice, "댓글1"));
+        commentRepository.save(new Comment(workout, me, "댓글2"));
+
+        mvc.perform(delete("/workouts/{id}", workout.getId()).with(login(me)))
+                .andExpect(status().isNoContent());
+
+        assertThat(workoutRepository.existsById(workout.getId())).isFalse();
+        assertThat(commentRepository.count()).isZero();
     }
 }

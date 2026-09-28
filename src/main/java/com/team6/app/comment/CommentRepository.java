@@ -11,4 +11,7 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
     List<Comment> findByWorkout_IdOrderByIdAsc(Long workoutId);
 
     long countByWorkout_Id(Long workoutId);
+
+    // 기록 삭제 전에 먼저 호출함. comments.workout_id FK 때문에 안 지우면 기록 삭제가 500으로 실패함
+    long deleteByWorkout_Id(Long workoutId);
 }
