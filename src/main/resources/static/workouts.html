@@ -161,7 +161,11 @@
   .grid .empty { grid-column: 1 / -1; }
   .sq { position: relative; aspect-ratio: 1; overflow: hidden; cursor: pointer; background: var(--raised);
         display: grid; place-items: center; text-align: center; }
-  .sq.CARDIO { background: var(--accent-soft); color: var(--cardio-text); }
+  /* 인증 사진이 없는 칸: 검정 바탕 + 종류 · 시간 · 날짜 */
+  .sq.nophoto { background: #000; color: #eceeea; transition: background .2s; }
+  .sq.nophoto:hover { background: #111; }
+  .sq .k { font-size: 11px; font-weight: 800; letter-spacing: .04em; color: #9ba1a7; margin-bottom: 4px; }
+  .sq .k.CARDIO { color: #c4f031; }
   .sq img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform .3s var(--ease); }
   .sq:hover img { transform: scale(1.04); }
   .sq .t { font-weight: 800; font-size: 15px; }
@@ -780,6 +784,15 @@
     title.append(count, toggle);
     box.appendChild(title);
 
+    v.append(form, box);
+    recordsBrowser(box, me.id, seq, {
+      emptyText: '아직 기록이 없어요. [+ 기록하기]로 첫 운동을 기록해 보세요.',
+      onTotal: (total) => { count.textContent = '내 운동 기록 ' + total + '개'; },
+    });
+  }
+
+  // 한 사람의 기록 모음: 종류 탭(전체/유산소/무산소) + 사진 그리드 / 목록 전환 + 페이지 번호 (6번 API)
+  function recordsBrowser(box, userId, seq, opts) {
     const toolbar = el('div', 'toolbar');
     const typeSeg = el('div', 'seg small');
     const viewSeg = el('div', 'seg small');
@@ -787,7 +800,6 @@
     box.appendChild(toolbar);
     const listBox = el('div');
     box.appendChild(listBox);
-    v.append(form, box);
 
     let type = '';
     let mode = 'grid';
@@ -805,13 +817,13 @@
       makeSeg(viewSeg, [['grid', '▦ 사진'], ['list', '☰ 목록']], mode, (m) => { mode = m; load(); });
       listBox.replaceChildren();
       const size = mode === 'grid' ? 9 : WORKOUT_PAGE;
-      pagedList(listBox, async (page) => pageResult(await api('GET', '/users/' + me.id + '/workouts?page=' + page
+      pagedList(listBox, async (page) => pageResult(await api('GET', '/users/' + userId + '/workouts?page=' + page
           + '&size=' + size + (type ? '&type=' + type : ''))),
         mode === 'grid' ? gridTile : (w) => listItem(w),
-        type ? '이 종류의 기록이 없어요.' : '아직 기록이 없어요. [+ 기록하기]로 첫 운동을 기록해 보세요.', seq, {
+        type ? '이 종류의 기록이 없어요.' : opts.emptyText, seq, {
           errorText: '기록을 불러오지 못했어요.',
           listClass: mode === 'grid' ? 'grid' : null,
-          onLoad: (r) => { count.textContent = '내 운동 기록 ' + r.total + '개'; },
+          onLoad: (r) => { if (opts.onTotal && !type) opts.onTotal(r.total); },
         });
     };
     load();
@@ -830,8 +842,10 @@
       img.loading = 'lazy';
       t.append(img, el('span', 'cap', w.durationMin + '분'));
     } else {
+      t.classList.add('nophoto');
       const inner = el('div');
-      inner.append(el('div', 't', (TYPE_LABELS[w.type] || w.type) + ' ' + w.durationMin + '분'),
+      inner.append(el('div', 'k ' + w.type, TYPE_LABELS[w.type] || w.type),
+          el('div', 't', formatMinutes(w.durationMin)),
           el('div', 'd', formatDate(w.workoutDate)));
       t.appendChild(inner);
     }
@@ -1335,10 +1349,9 @@
     v.appendChild(head);
 
     const box = el('section');
-    box.appendChild(el('div', 'section-title', pf.me ? '내 운동 기록' : pf.nickname + '님의 운동 기록'));
+    box.appendChild(el('div', 'section-title', (pf.me ? '내 운동 기록 ' : pf.nickname + '님의 운동 기록 ') + pf.workoutCount + '개'));
     v.appendChild(box);
-    pagedList(box, async (page) => pageResult(await api('GET', '/users/' + id + '/workouts?page=' + page + '&size=' + WORKOUT_PAGE)),
-      (w) => listItem(w), '아직 운동 기록이 없어요.', seq);
+    recordsBrowser(box, id, seq, { emptyText: '아직 운동 기록이 없어요.' });
   }
 
   // 12. 주간 랭킹 TOP 10 ({week, entries:[{rank, userId, nickname, minutes}]})
