@@ -1,6 +1,7 @@
 package com.team6.app.follow;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -12,6 +13,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.team6.app.user.User;
 import com.team6.app.user.UserRepository;
 import com.team6.app.workout.Workout;
+import com.team6.app.workout.WorkoutPhoto;
+import com.team6.app.workout.WorkoutPhotoRepository;
 import com.team6.app.workout.WorkoutRepository;
 import java.time.LocalDate;
 import org.junit.jupiter.api.BeforeEach;
@@ -38,6 +41,8 @@ class FollowApiTest {
     @Autowired
     WorkoutRepository workoutRepository;
     @Autowired
+    WorkoutPhotoRepository workoutPhotoRepository;
+    @Autowired
     FollowRepository followRepository;
 
     MockMvc mvc;
@@ -49,6 +54,7 @@ class FollowApiTest {
     void setUp() {
         mvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
         followRepository.deleteAll();
+        workoutPhotoRepository.deleteAll();
         workoutRepository.deleteAll();
         userRepository.deleteAll();
         me = userRepository.save(new User("me@test.com", "pw", "me"));
@@ -125,6 +131,23 @@ class FollowApiTest {
                 .andExpect(jsonPath("$[0].userId").value(alice.getId()))
                 .andExpect(jsonPath("$[0].nickname").value("alice"))
                 .andExpect(jsonPath("$[1].type").value("RUN"));
+    }
+
+    // 피드 API가 사진 URL을 항상 null로 보내던 버그 회귀 테스트
+    @Test
+    void 피드는_사진이_있는_기록의_photoUrl을_채워줌() throws Exception {
+        LocalDate d = LocalDate.of(2026, 9, 21);
+        Workout withPhoto = workoutRepository.save(new Workout(alice, "RUN", 30, null, null, d));
+        workoutRepository.save(new Workout(alice, "SWIM", 40, null, null, d.plusDays(1)));
+        workoutPhotoRepository.save(new WorkoutPhoto(withPhoto.getId(), "abc_photo.jpg", "photo.jpg", 1024L));
+        follow(me, alice);
+
+        mvc.perform(get("/feed").with(login(me)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].type").value("SWIM"))
+                .andExpect(jsonPath("$[0].photoUrl").value(nullValue()))
+                .andExpect(jsonPath("$[1].type").value("RUN"))
+                .andExpect(jsonPath("$[1].photoUrl").value("/photos/abc_photo.jpg"));
     }
 
     @Test
