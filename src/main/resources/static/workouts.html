@@ -121,6 +121,10 @@
   .profile-head .joined { color: var(--sub); font-size: 13px; margin-top: 4px; }
   .stats .link { cursor: pointer; }
   .stats .link:hover b { text-decoration: underline; text-underline-offset: 3px; }
+  .danger-zone { margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--line); }
+  .danger-zone .lbl { margin-top: 0; color: var(--danger); }
+  .danger-zone .check { display: flex; align-items: center; gap: 8px; margin: 12px 0; font-size: 14px; }
+  .danger-zone .field { margin-top: 12px; }
   .edit-photo { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
   .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 4px 20px 16px; }
   .tile { background: var(--raised); border-radius: var(--radius-ctl); padding: 14px 16px; min-width: 0; }
@@ -157,7 +161,11 @@
   .grid .empty { grid-column: 1 / -1; }
   .sq { position: relative; aspect-ratio: 1; overflow: hidden; cursor: pointer; background: var(--raised);
         display: grid; place-items: center; text-align: center; }
-  .sq.CARDIO { background: var(--accent-soft); color: var(--cardio-text); }
+  /* 인증 사진이 없는 칸: 검정 바탕 + 종류 · 시간 · 날짜 */
+  .sq.nophoto { background: #000; color: #eceeea; transition: background .2s; }
+  .sq.nophoto:hover { background: #111; }
+  .sq .k { font-size: 11px; font-weight: 800; letter-spacing: .04em; color: #9ba1a7; margin-bottom: 4px; }
+  .sq .k.CARDIO { color: #c4f031; }
   .sq img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform .3s var(--ease); }
   .sq:hover img { transform: scale(1.04); }
   .sq .t { font-weight: 800; font-size: 15px; }
@@ -579,7 +587,18 @@
       </div>
       <div class="hint">JPG · PNG · WEBP, 5MB 이하. 고르면 바로 바뀌어요.</div>
       <button id="pSave" class="btn btn-primary full">닉네임 저장</button>
-      <div id="pMsg" class="msg"></div>`;
+      <div id="pMsg" class="msg"></div>
+      <div class="danger-zone">
+        <label class="lbl">회원 탈퇴</label>
+        <div class="hint">운동 기록 · 인증 사진 · 댓글 · 팔로우 · 랭킹 점수가 모두 삭제되고 되돌릴 수 없어요.</div>
+        <button id="pOut" type="button" class="btn btn-danger" style="margin-top: 12px;">회원 탈퇴</button>
+        <div id="pOutBox" hidden>
+          <input id="pOutPw" class="field" type="password" placeholder="비밀번호를 입력해 확인하세요" autocomplete="current-password">
+          <label class="check"><input id="pOutOk" type="checkbox"> 모든 데이터가 삭제된다는 것을 확인했어요</label>
+          <button id="pOutGo" type="button" class="btn btn-danger" disabled>탈퇴하기</button>
+          <div id="pOutMsg" class="msg"></div>
+        </div>
+      </div>`;
     box.appendChild(f);
     const q = (id) => f.querySelector('#' + id);
     q('pNick').value = pf.nickname;
@@ -613,6 +632,26 @@
       if (!r.ok) return toast(MESSAGES.photo[r.status] || '사진을 올리지 못했어요. (' + r.status + ')');
       toast('프로필 사진을 바꿨어요.');
       myView();
+    };
+    // 회원 탈퇴: 비밀번호 + 확인 체크를 모두 해야 버튼이 켜짐
+    q('pOut').onclick = () => {
+      q('pOut').hidden = true;
+      q('pOutBox').hidden = false;
+      q('pOutPw').focus();
+    };
+    const canOut = () => { q('pOutGo').disabled = !(q('pOutOk').checked && q('pOutPw').value); };
+    q('pOutOk').onchange = canOut;
+    q('pOutPw').oninput = canOut;
+    q('pOutGo').onclick = async () => {
+      if (!confirm('정말 탈퇴할까요? 이 작업은 되돌릴 수 없어요.')) return;
+      q('pOutGo').disabled = true;
+      const r = await api('DELETE', '/users/me', { password: q('pOutPw').value });
+      if (!r.ok) {
+        canOut();
+        return (q('pOutMsg').textContent = r.status === 400 ? '비밀번호가 올바르지 않아요.' : '탈퇴하지 못했어요. (' + r.status + ')');
+      }
+      location.hash = '#/';
+      logout('탈퇴가 완료됐어요. 그동안 오운공과 함께해 주셔서 고마워요.');
     };
     q('pPhotoDel').onclick = async () => {
       if (!confirm('프로필 사진을 삭제할까요?')) return;
@@ -745,6 +784,15 @@
     title.append(count, toggle);
     box.appendChild(title);
 
+    v.append(form, box);
+    recordsBrowser(box, me.id, seq, {
+      emptyText: '아직 기록이 없어요. [+ 기록하기]로 첫 운동을 기록해 보세요.',
+      onTotal: (total) => { count.textContent = '내 운동 기록 ' + total + '개'; },
+    });
+  }
+
+  // 한 사람의 기록 모음: 종류 탭(전체/유산소/무산소) + 사진 그리드 / 목록 전환 + 페이지 번호 (6번 API)
+  function recordsBrowser(box, userId, seq, opts) {
     const toolbar = el('div', 'toolbar');
     const typeSeg = el('div', 'seg small');
     const viewSeg = el('div', 'seg small');
@@ -752,7 +800,6 @@
     box.appendChild(toolbar);
     const listBox = el('div');
     box.appendChild(listBox);
-    v.append(form, box);
 
     let type = '';
     let mode = 'grid';
@@ -770,13 +817,13 @@
       makeSeg(viewSeg, [['grid', '▦ 사진'], ['list', '☰ 목록']], mode, (m) => { mode = m; load(); });
       listBox.replaceChildren();
       const size = mode === 'grid' ? 9 : WORKOUT_PAGE;
-      pagedList(listBox, async (page) => pageResult(await api('GET', '/users/' + me.id + '/workouts?page=' + page
+      pagedList(listBox, async (page) => pageResult(await api('GET', '/users/' + userId + '/workouts?page=' + page
           + '&size=' + size + (type ? '&type=' + type : ''))),
         mode === 'grid' ? gridTile : (w) => listItem(w),
-        type ? '이 종류의 기록이 없어요.' : '아직 기록이 없어요. [+ 기록하기]로 첫 운동을 기록해 보세요.', seq, {
+        type ? '이 종류의 기록이 없어요.' : opts.emptyText, seq, {
           errorText: '기록을 불러오지 못했어요.',
           listClass: mode === 'grid' ? 'grid' : null,
-          onLoad: (r) => { count.textContent = '내 운동 기록 ' + r.total + '개'; },
+          onLoad: (r) => { if (opts.onTotal && !type) opts.onTotal(r.total); },
         });
     };
     load();
@@ -795,8 +842,10 @@
       img.loading = 'lazy';
       t.append(img, el('span', 'cap', w.durationMin + '분'));
     } else {
+      t.classList.add('nophoto');
       const inner = el('div');
-      inner.append(el('div', 't', (TYPE_LABELS[w.type] || w.type) + ' ' + w.durationMin + '분'),
+      inner.append(el('div', 'k ' + w.type, TYPE_LABELS[w.type] || w.type),
+          el('div', 't', formatMinutes(w.durationMin)),
           el('div', 'd', formatDate(w.workoutDate)));
       t.appendChild(inner);
     }
@@ -1300,10 +1349,9 @@
     v.appendChild(head);
 
     const box = el('section');
-    box.appendChild(el('div', 'section-title', pf.me ? '내 운동 기록' : pf.nickname + '님의 운동 기록'));
+    box.appendChild(el('div', 'section-title', (pf.me ? '내 운동 기록 ' : pf.nickname + '님의 운동 기록 ') + pf.workoutCount + '개'));
     v.appendChild(box);
-    pagedList(box, async (page) => pageResult(await api('GET', '/users/' + id + '/workouts?page=' + page + '&size=' + WORKOUT_PAGE)),
-      (w) => listItem(w), '아직 운동 기록이 없어요.', seq);
+    recordsBrowser(box, id, seq, { emptyText: '아직 운동 기록이 없어요.' });
   }
 
   // 12. 주간 랭킹 TOP 10 ({week, entries:[{rank, userId, nickname, minutes}]})
