@@ -61,6 +61,36 @@ curl -s -H 'Authorization: Bearer <accessToken>' 'http://localhost:8080/feed?pag
 - 피드는 작성자를 함께 조회(join fetch)해 20건이어도 쿼리 1번으로 가져옴
 - `workout/Workout`, `workout/WorkoutResponse` 는 피드에 필요한 최소 형태로 먼저 추가함 (A 파트에서 확장)
 
+## 주간 랭킹 (Redis)
+
+| 기능 | Method | URL | 인증 |
+|---|---|---|---|
+| 주간 운동 시간 TOP 10 | GET | /rankings/weekly?date=2026-09-28 (date 생략 시 이번 주) | 불필요 |
+
+- 키: `ranking:weekly:{yyyy}-W{ww}` (ISO 주차, 월요일 시작, Asia/Seoul), Sorted Set, 5주 뒤 자동 만료
+- 운동 기록을 저장한 뒤 아래 한 줄을 호출하면 랭킹에 반영됨
+
+```java
+rankingService.addScore(userId, durationMin, workoutDate);
+```
+
+```bash
+# Redis에서 이번 주 랭킹 확인
+docker compose exec cache sh -c 'redis-cli -a "$REDIS_PASSWORD" ZREVRANGE ranking:weekly:2026-W40 0 9 WITHSCORES'
+```
+
+## 테스트
+
+```bash
+./gradlew test --tests 'com.team6.app.ranking.*'
+```
+
+Windows 사용자 이름에 한글이 있으면 Mockito가 임시 폴더를 쓰지 못해 실패할 수 있음. 이때는 영문 경로를 임시 폴더로 지정해 실행함.
+
+```bash
+TMP='C:\Users\Public\tmp' TEMP='C:\Users\Public\tmp' ./gradlew test --tests 'com.team6.app.ranking.*'
+```
+
 ## 재현 테스트
 
 ```bash
