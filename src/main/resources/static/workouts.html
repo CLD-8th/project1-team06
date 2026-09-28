@@ -28,11 +28,18 @@
            backdrop-filter: blur(14px) saturate(160%); -webkit-backdrop-filter: blur(14px) saturate(160%);
            border-bottom: 1px solid var(--line); }
   header .inner { max-width: 640px; margin: 0 auto; padding: 12px 20px; display: flex; align-items: center; gap: 12px; }
-  header .search { max-width: 640px; margin: 0 auto; padding: 0 20px 12px; }
+  header .search { position: relative; max-width: 640px; margin: 0 auto; padding: 0 20px 12px; }
   header .search input { width: 100%; padding: 11px 14px; border: 1px solid transparent; border-radius: var(--radius-ctl);
                          background: var(--raised); transition: border-color .2s, background .2s; }
   header .search input::placeholder { color: var(--sub); }
   header .search input:focus { outline: none; border-color: var(--ink); background: var(--card); }
+  /* 검색 드롭다운: 페이지 이동 없이 입력창 바로 아래에 결과 미리보기 */
+  .search-dd { position: absolute; left: 20px; right: 20px; top: 100%; margin-top: 6px; background: var(--card);
+               border: 1px solid var(--line); border-radius: var(--radius-card); box-shadow: var(--shadow);
+               max-height: 320px; overflow-y: auto; z-index: 5; }
+  .search-dd .empty { padding: 18px 16px; text-align: center; color: var(--sub); font-size: 14px; }
+  .search-dd .more { display: block; width: 100%; padding: 12px; border: 0; border-top: 1px solid var(--line);
+                      background: none; color: var(--accent-strong); font-weight: 700; cursor: pointer; }
   .logo { font-size: 22px; font-weight: 800; letter-spacing: -0.04em; white-space: nowrap; flex: none; }
   nav { display: flex; gap: 2px; margin-left: auto; padding: 3px; border-radius: 999px; background: var(--raised); }
   nav a { padding: 6px 14px; border-radius: 999px; font-weight: 600; font-size: 14px; color: var(--sub); white-space: nowrap;
@@ -253,6 +260,7 @@
   }
   @media (max-width: 480px) {
     header .inner, header .search, main { padding-left: 16px; padding-right: 16px; }
+    .search-dd { left: 16px; right: 16px; }
     header .inner { gap: 8px; }
     header .logo { font-size: 20px; }
     nav a { padding: 6px 10px; font-size: 13px; }
@@ -300,7 +308,10 @@
       </nav>
       <button id="logoutBtn" class="btn btn-gray">로그아웃</button>
     </div>
-    <div class="search"><input id="searchInput" type="search" placeholder="닉네임으로 사람 검색"></div>
+    <div class="search">
+      <input id="searchInput" type="search" placeholder="닉네임으로 사람 검색" autocomplete="off">
+      <div id="searchDD" class="search-dd" hidden></div>
+    </div>
   </header>
   <main id="view"></main>
 </div>
@@ -1211,6 +1222,35 @@
     return row;
   }
 
+  // 검색 드롭다운: 페이지 이동 없이 입력창 바로 아래에 결과 최대 5개 미리보기
+  const searchDD = $('searchDD');
+  let ddSeq = 0;
+
+  function closeDropdown() {
+    searchDD.hidden = true;
+    searchDD.replaceChildren();
+  }
+
+  async function openDropdown(q) {
+    const seq = ++ddSeq;
+    const r = await api('GET', '/users?page=0' + (q ? '&q=' + encodeURIComponent(q) : ''));
+    if (seq !== ddSeq || document.activeElement !== $('searchInput')) return;  // 늦게 온 응답, 혹은 그새 포커스가 벗어남
+    searchDD.replaceChildren();
+    const items = r.ok ? r.data.slice(0, 5) : [];
+    if (!r.ok) {
+      searchDD.appendChild(el('div', 'empty', '검색하지 못했어요.'));
+    } else if (items.length === 0) {
+      searchDD.appendChild(el('div', 'empty', "'" + q + "'와 일치하는 사용자가 없어요."));
+    } else {
+      items.forEach((u) => searchDD.appendChild(userRow(u)));
+    }
+    const more = el('button', 'more', '검색 결과 더 보기');
+    more.type = 'button';
+    more.onclick = () => { location.hash = '#/search?q=' + encodeURIComponent(q); };
+    searchDD.appendChild(more);
+    searchDD.hidden = false;
+  }
+
   // Page 응답(content, last, totalPages, totalElements)을 목록 공통 형태로 바꿈
   const pageResult = (r) => ({
     ok: r.ok,
@@ -1428,6 +1468,7 @@
 
   function route() {
     if (!me) return;
+    closeDropdown();
     const h = location.hash || '#/';
     $('navFeed').classList.toggle('on', h === '#/' || h === '#');
     $('navMe').classList.toggle('on', h === '#/me');
@@ -1454,16 +1495,24 @@
   $('password').onkeydown = (e) => { if (e.key === 'Enter' && !signupMode) submitAuth(); };
   $('switchBtn').onclick = () => setSignupMode(!signupMode);
   $('logoutBtn').onclick = () => logout();
+  // 검색: 페이지 이동 없이 입력창 아래에 드롭다운으로 미리보기 (더 보기를 눌러야 진짜 검색 페이지로 이동)
   let searchTimer;
   $('searchInput').oninput = (e) => {
     clearTimeout(searchTimer);
     const q = e.target.value.trim();
-    searchTimer = setTimeout(() => {
-      const target = '#/search' + (q ? '?q=' + encodeURIComponent(q) : '');
-      if (location.hash !== target) location.hash = target;
-    }, 300);
+    if (!q) return closeDropdown();
+    searchTimer = setTimeout(() => openDropdown(q), 300);
   };
-  $('searchInput').onfocus = () => { if (!location.hash.startsWith('#/search')) location.hash = '#/search'; };
+  $('searchInput').onfocus = () => {
+    const q = $('searchInput').value.trim();
+    if (q) openDropdown(q);
+  };
+  $('searchInput').onkeydown = (e) => {
+    if (e.key === 'Escape') { closeDropdown(); e.target.blur(); }
+  };
+  document.addEventListener('click', (e) => {
+    if (!searchDD.hidden && !e.target.closest('.search')) closeDropdown();
+  });
   window.addEventListener('hashchange', route);
 
   if (token) enter(); else logout();
