@@ -150,6 +150,12 @@
   .badge.CARDIO { background: var(--cardio); color: var(--cardio-text); }
   .badge.STRENGTH { background: var(--strength); color: var(--strength-text); }
 
+  /* 홈(로고를 누르면 오는 첫 화면). 빈 공백 중앙보다 살짝 위에 인사말을 두고 바로 밑에 기록 폼 */
+  .home-hero { padding: 12vh 20px 28px; text-align: center; }
+  .home-hero .title { font-size: 26px; font-weight: 800; letter-spacing: -0.03em; }
+  .home-hero .sub { margin-top: 8px; color: var(--sub); font-size: 15px; }
+  .home-hero .btn { margin-top: 24px; padding: 12px 28px; font-size: 15px; }
+
   /* 댓글 */
   .comment-row { display: flex; gap: 10px; padding: 12px 20px; align-items: flex-start; border-top: 1px solid var(--line); }
   .comment-row .body { flex: 1; min-width: 0; }
@@ -208,6 +214,8 @@
     .week-nav .btn { padding: 7px 10px; font-size: 13px; }
     .rank-row { padding: 12px 16px; gap: 10px; }
     .rank-row .mins { min-width: 72px; font-size: 14px; }
+    .home-hero { padding: 8vh 16px 20px; }
+    .home-hero .title { font-size: 22px; }
   }
 </style>
 </head>
@@ -231,7 +239,7 @@
     <div class="inner">
       <a class="logo" href="#/">오운공</a>
       <nav>
-        <a id="navFeed" href="#/">피드</a>
+        <a id="navFeed" href="#/feed">피드</a>
         <a id="navRank" href="#/ranking">랭킹</a>
         <a id="navMe" href="#/me">내 기록</a>
       </nav>
@@ -388,6 +396,19 @@
     return { v, seq: viewSeq };
   }
 
+  // 홈: 로고를 누르면 오는 첫 화면. 인사말 + 바로 기록 폼 (탭으로 노출하지 않음)
+  function homeView() {
+    const { v } = newView();
+    const hero = el('div', 'home-hero');
+    hero.appendChild(el('div', 'title', '오늘은 어떤 운동을 하셨나요?'));
+    hero.appendChild(el('div', 'sub', '인증샷도 함께 올려주시면 더 좋아요!'));
+    const cta = el('button', 'btn btn-primary', '기록하기');
+    // '내 기록' 탭으로 넘어가면서 등록 폼이 바로 펼쳐진 상태로 뜨게 함
+    cta.onclick = () => { location.hash = '#/me?new=1'; };
+    hero.appendChild(cta);
+    v.appendChild(hero);
+  }
+
   // 관심 피드 (10. 팔로우한 사람들 기록 최신순 20개씩, 배열 응답)
   function feedView() {
     const { v, seq } = newView();
@@ -507,7 +528,8 @@
   }
 
   // 4. 기록 등록 (+ 13. 사진은 등록 뒤 이어서 올림)
-  function createForm() {
+  // onSuccess(created) 를 안 넘기면 기존처럼 '내 기록' 목록을 새로 불러옴
+  function createForm(onSuccess) {
     const box = el('section');
     box.appendChild(el('div', 'section-title', '운동 기록하기'));
     const f = el('div', 'form');
@@ -583,7 +605,7 @@
       } else {
         toast('기록했어요.');
       }
-      myView();  // 폼을 비우고 목록을 새로 불러옴
+      if (onSuccess) onSuccess(r.data); else myView();
     };
     return box;
   }
@@ -1023,8 +1045,8 @@
   function route() {
     if (!me) return;
     const h = location.hash || '#/';
-    $('navFeed').classList.toggle('on', h === '#/' || h === '#');
-    $('navMe').classList.toggle('on', h === '#/me');
+    $('navFeed').classList.toggle('on', h === '#/feed');
+    $('navMe').classList.toggle('on', h.startsWith('#/me'));
     $('navRank').classList.toggle('on', h.startsWith('#/ranking'));
     if (!h.startsWith('#/search')) $('searchInput').value = '';
     const m = h.match(/^#\/workouts\/(\d+)$/);
@@ -1032,12 +1054,14 @@
     const u = h.match(/^#\/users\/(\d+)$/);
     if (u) return profileView(Number(u[1]));
     if (h.startsWith('#/search')) return searchView(new URLSearchParams(h.split('?')[1] || '').get('q') || '');
-    if (h === '#/me') return myView();
+    // 홈의 [기록하기] 버튼은 #/me?new=1 로 넘어와 폼이 바로 펼쳐진 상태로 뜨게 함
+    if (h.startsWith('#/me')) return myView(new URLSearchParams(h.split('?')[1] || '').get('new') === '1');
     if (h.startsWith('#/ranking')) {
       const w = Number(new URLSearchParams(h.split('?')[1] || '').get('w') || 0);
       return rankingView(Number.isInteger(w) && w <= 0 ? w : 0);
     }
-    feedView();
+    if (h === '#/feed') return feedView();
+    homeView();  // #/ (로고), 그 외 알 수 없는 경로
   }
 
   // ---------- 이벤트 ----------
