@@ -19,7 +19,9 @@
   header { position: sticky; top: 0; z-index: 2; background: var(--card); border-bottom: 1px solid var(--line); }
   header .inner { max-width: 600px; margin: 0 auto; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
   .logo { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
-  .me { color: var(--sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  nav { display: flex; gap: 4px; margin-left: auto; }
+  nav a { padding: 7px 12px; border-radius: 8px; font-weight: 600; color: var(--sub); white-space: nowrap; }
+  nav a.on { background: #efefef; color: var(--text); }
 
   main { max-width: 600px; margin: 0 auto; padding: 16px 16px 48px; }
   section { background: var(--card); border: 1px solid var(--line); border-radius: 8px; margin-bottom: 16px; }
@@ -63,6 +65,11 @@
   .item .date { margin-top: 6px; color: var(--sub); font-size: 12px; }
   .thumb { flex: none; width: 56px; height: 56px; border-radius: 6px; object-fit: cover; background: #efefef; }
 
+  .author { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-weight: 600; }
+  .avatar { flex: none; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center;
+            color: #fff; font-weight: 700; font-size: 12px; }
+  .follow-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+
   .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; margin-right: 6px; vertical-align: 1px; }
   .badge.CARDIO { background: var(--cardio); color: var(--cardio-text); }
   .badge.STRENGTH { background: var(--strength); color: var(--strength-text); }
@@ -103,7 +110,10 @@
   <header>
     <div class="inner">
       <a class="logo" href="#/">오운공</a>
-      <span id="meName" class="me"></span>
+      <nav>
+        <a id="navFeed" href="#/">피드</a>
+        <a id="navMe" href="#/me">내 기록</a>
+      </nav>
       <button id="logoutBtn" class="btn btn-gray">로그아웃</button>
     </div>
   </header>
@@ -240,7 +250,6 @@
     const r = await api('GET', '/users/me');
     if (!r.ok) return logout();
     me = r.data;
-    $('meName').textContent = me.nickname + '님';
     $('auth').hidden = true;
     $('app').hidden = false;
     route();
@@ -256,8 +265,50 @@
     return { v, seq: viewSeq };
   }
 
-  // 홈: 기록 등록 + 내 기록 목록
-  function homeView() {
+  // 관심 피드 (10. 팔로우한 사람들 기록 최신순 20개씩, 배열 응답)
+  function feedView() {
+    const { v, seq } = newView();
+    const box = el('section');
+    box.appendChild(el('div', 'section-title', '관심 피드'));
+    const list = el('div');
+    const moreWrap = el('div', 'more');
+    const more = el('button', 'btn-link', '더 보기');
+    moreWrap.appendChild(more);
+    moreWrap.hidden = true;
+    box.append(list, moreWrap);
+    v.appendChild(box);
+
+    let page = 0;
+    async function load() {
+      more.disabled = true;
+      const r = await api('GET', '/feed?page=' + page);
+      if (seq !== viewSeq) return;
+      more.disabled = false;
+      if (!r.ok) {
+        list.appendChild(el('div', 'empty', '피드를 불러오지 못했어요.'));
+        return;
+      }
+      if (page === 0 && r.data.length === 0) {
+        list.appendChild(el('div', 'empty', '아직 관심 피드가 비어 있어요. 다른 사람의 기록 상세에서 팔로우하면 여기에 떠요.'));
+      }
+      r.data.forEach((w) => list.appendChild(listItem(w, true)));
+      moreWrap.hidden = r.data.length < PAGE_SIZE;
+      page++;
+    }
+    more.onclick = load;
+    load();
+  }
+
+  // 사진이 없으므로 닉네임 첫 글자 + id별 고정 색으로 프로필 이미지를 대신함
+  const COLORS = ['#f58529', '#dd2a7b', '#8134af', '#515bd4', '#1a7f37', '#e1306c', '#0095f6', '#c13584'];
+  function avatar(id, nickname) {
+    const a = el('div', 'avatar', (nickname || '?').charAt(0).toUpperCase());
+    a.style.background = COLORS[id % COLORS.length];
+    return a;
+  }
+
+  // 내 기록: 기록 등록 + 내 기록 목록
+  function myView() {
     const { v, seq } = newView();
     v.appendChild(createForm());
 
@@ -297,10 +348,15 @@
     load();
   }
 
-  function listItem(w) {
+  function listItem(w, withAuthor) {
     const item = el('div', 'item');
     item.onclick = () => { location.hash = '#/workouts/' + w.id; };
     const body = el('div', 'body');
+    if (withAuthor) {
+      const author = el('div', 'author');
+      author.append(avatar(w.userId, w.nickname), w.nickname);
+      body.appendChild(author);
+    }
     const kind = el('div', 'kind');
     kind.append(badge(w.type), summary(w));
     body.appendChild(kind);
@@ -395,7 +451,7 @@
       } else {
         toast('기록했어요.');
       }
-      homeView();  // 폼을 비우고 목록을 새로 불러옴
+      myView();  // 폼을 비우고 목록을 새로 불러옴
     };
     return box;
   }
@@ -407,8 +463,8 @@
     if (seq !== viewSeq) return;
     const box = el('section');
     v.appendChild(box);
-    const back = el('a', 'btn-link', '← 내 기록으로');
-    back.href = '#/';
+    const back = el('button', 'btn-link', '← 뒤로');
+    back.onclick = () => (history.length > 1 ? history.back() : (location.hash = '#/'));
     const title = el('div', 'section-title');
     title.appendChild(back);
     box.appendChild(title);
@@ -419,6 +475,16 @@
     const w = r.data;
     const mine = me && w.userId === me.id;
     const d = el('div', 'detail');
+
+    // 남의 기록이면 작성자 + 팔로우 버튼 (팔로우 여부를 알려 주는 API가 없어 409를 받으면 팔로우 중으로 바꿈)
+    if (!mine) {
+      const fr = el('div', 'follow-row');
+      const author = el('div', 'author');
+      author.style.marginBottom = '0';
+      author.append(avatar(w.userId, w.nickname), w.nickname);
+      fr.append(author, followButton(w.userId));
+      d.appendChild(fr);
+    }
 
     const photo = safePhoto(w.photoUrl);
     if (photo) {
@@ -440,7 +506,7 @@
     row('시간', w.durationMin + '분');
     if (w.distanceKm != null) row('거리', Number(w.distanceKm) + 'km');
     row('날짜', formatDate(w.workoutDate));
-    row('작성자', w.nickname);
+    if (mine) row('작성자', w.nickname + ' (나)');
     row('메모', w.memo || '-');
     d.appendChild(dl);
 
@@ -474,7 +540,7 @@
           return toast(MESSAGES.remove[res.status] || '삭제하지 못했어요. (' + res.status + ')');
         }
         toast('삭제했어요.');
-        location.hash = '#/';
+        location.hash = '#/me';
       };
       actions.append(photoBtn, file, del);
       d.appendChild(actions);
@@ -482,11 +548,40 @@
     box.appendChild(d);
   }
 
+  function followButton(userId) {
+    const btn = el('button', 'btn btn-primary', '팔로우');
+    let following = false;
+    const render = () => {
+      btn.textContent = following ? '팔로우 취소' : '팔로우';
+      btn.className = 'btn ' + (following ? 'btn-gray' : 'btn-primary');
+    };
+    btn.onclick = async () => {
+      if (following && !confirm('팔로우를 취소할까요? 관심 피드에서 이 사람 기록이 빠져요.')) return;
+      btn.disabled = true;
+      const r = await api(following ? 'DELETE' : 'POST', '/users/' + userId + '/follow');
+      btn.disabled = false;
+      if (r.status === 409) {  // 이미 팔로우 중이었음
+        following = true;
+        render();
+        return toast('이미 팔로우 중이에요.');
+      }
+      if (!r.ok) return toast('처리하지 못했어요. (' + r.status + ')');
+      following = !following;
+      render();
+      toast(following ? '팔로우했어요. 관심 피드에 기록이 떠요.' : '팔로우를 취소했어요.');
+    };
+    return btn;
+  }
+
   function route() {
     if (!me) return;
-    const m = (location.hash || '#/').match(/^#\/workouts\/(\d+)$/);
+    const h = location.hash || '#/';
+    $('navFeed').classList.toggle('on', h === '#/' || h === '#');
+    $('navMe').classList.toggle('on', h === '#/me');
+    const m = h.match(/^#\/workouts\/(\d+)$/);
     if (m) return detailView(Number(m[1]));
-    homeView();
+    if (h === '#/me') return myView();
+    feedView();
   }
 
   // ---------- 이벤트 ----------
