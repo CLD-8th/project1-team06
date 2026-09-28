@@ -121,6 +121,10 @@
   .profile-head .joined { color: var(--sub); font-size: 13px; margin-top: 4px; }
   .stats .link { cursor: pointer; }
   .stats .link:hover b { text-decoration: underline; text-underline-offset: 3px; }
+  .danger-zone { margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--line); }
+  .danger-zone .lbl { margin-top: 0; color: var(--danger); }
+  .danger-zone .check { display: flex; align-items: center; gap: 8px; margin: 12px 0; font-size: 14px; }
+  .danger-zone .field { margin-top: 12px; }
   .edit-photo { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
   .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 4px 20px 16px; }
   .tile { background: var(--raised); border-radius: var(--radius-ctl); padding: 14px 16px; min-width: 0; }
@@ -579,7 +583,18 @@
       </div>
       <div class="hint">JPG · PNG · WEBP, 5MB 이하. 고르면 바로 바뀌어요.</div>
       <button id="pSave" class="btn btn-primary full">닉네임 저장</button>
-      <div id="pMsg" class="msg"></div>`;
+      <div id="pMsg" class="msg"></div>
+      <div class="danger-zone">
+        <label class="lbl">회원 탈퇴</label>
+        <div class="hint">운동 기록 · 인증 사진 · 댓글 · 팔로우 · 랭킹 점수가 모두 삭제되고 되돌릴 수 없어요.</div>
+        <button id="pOut" type="button" class="btn btn-danger" style="margin-top: 12px;">회원 탈퇴</button>
+        <div id="pOutBox" hidden>
+          <input id="pOutPw" class="field" type="password" placeholder="비밀번호를 입력해 확인하세요" autocomplete="current-password">
+          <label class="check"><input id="pOutOk" type="checkbox"> 모든 데이터가 삭제된다는 것을 확인했어요</label>
+          <button id="pOutGo" type="button" class="btn btn-danger" disabled>탈퇴하기</button>
+          <div id="pOutMsg" class="msg"></div>
+        </div>
+      </div>`;
     box.appendChild(f);
     const q = (id) => f.querySelector('#' + id);
     q('pNick').value = pf.nickname;
@@ -613,6 +628,26 @@
       if (!r.ok) return toast(MESSAGES.photo[r.status] || '사진을 올리지 못했어요. (' + r.status + ')');
       toast('프로필 사진을 바꿨어요.');
       myView();
+    };
+    // 회원 탈퇴: 비밀번호 + 확인 체크를 모두 해야 버튼이 켜짐
+    q('pOut').onclick = () => {
+      q('pOut').hidden = true;
+      q('pOutBox').hidden = false;
+      q('pOutPw').focus();
+    };
+    const canOut = () => { q('pOutGo').disabled = !(q('pOutOk').checked && q('pOutPw').value); };
+    q('pOutOk').onchange = canOut;
+    q('pOutPw').oninput = canOut;
+    q('pOutGo').onclick = async () => {
+      if (!confirm('정말 탈퇴할까요? 이 작업은 되돌릴 수 없어요.')) return;
+      q('pOutGo').disabled = true;
+      const r = await api('DELETE', '/users/me', { password: q('pOutPw').value });
+      if (!r.ok) {
+        canOut();
+        return (q('pOutMsg').textContent = r.status === 400 ? '비밀번호가 올바르지 않아요.' : '탈퇴하지 못했어요. (' + r.status + ')');
+      }
+      location.hash = '#/';
+      logout('탈퇴가 완료됐어요. 그동안 오운공과 함께해 주셔서 고마워요.');
     };
     q('pPhotoDel').onclick = async () => {
       if (!confirm('프로필 사진을 삭제할까요?')) return;
