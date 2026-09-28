@@ -57,7 +57,7 @@ curl -s -X POST -H 'Authorization: Bearer <accessToken>' http://localhost:8080/u
 curl -s -H 'Authorization: Bearer <accessToken>' 'http://localhost:8080/feed?page=0'
 ```
 
-- `follows` 테이블의 `(follower_id, following_id)` 유일 제약으로 중복 팔로우를 막음
+- `follows` 테이블의 `(follower_id, followee_id)` 유일 제약으로 중복 팔로우를 막음
 - 피드는 작성자를 함께 조회(join fetch)해 20건이어도 쿼리 1번으로 가져옴
 - `workout/Workout`, `workout/WorkoutResponse` 는 피드에 필요한 최소 형태로 먼저 추가함 (A 파트에서 확장)
 

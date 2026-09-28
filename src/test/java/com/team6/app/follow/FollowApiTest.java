@@ -69,7 +69,7 @@ class FollowApiTest {
     @Test
     void 팔로우_성공_204() throws Exception {
         follow(me, alice);
-        assertThat(followRepository.existsByFollowerIdAndFollowingId(me.getId(), alice.getId())).isTrue();
+        assertThat(followRepository.existsByFollowerIdAndFolloweeId(me.getId(), alice.getId())).isTrue();
     }
 
     @Test

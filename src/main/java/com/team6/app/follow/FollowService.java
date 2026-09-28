@@ -28,7 +28,7 @@ public class FollowService {
         }
         User target = userRepository.findById(targetId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."));
-        if (followRepository.existsByFollowerIdAndFollowingId(followerId, targetId)) {
+        if (followRepository.existsByFollowerIdAndFolloweeId(followerId, targetId)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 팔로우 중입니다.");
         }
         // 확인과 저장 사이에 같은 요청이 끼어들면 유일 제약이 막으므로 그 경우도 중복으로 응답함
