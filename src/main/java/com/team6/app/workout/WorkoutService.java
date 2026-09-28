@@ -45,8 +45,16 @@ public class WorkoutService {
 
     @Transactional(readOnly = true)
     public Page<WorkoutResponse> getUserWorkouts(Long userId, Pageable pageable) {
-        return workoutRepository.findByUser_IdOrderByIdDesc(userId, pageable)
-                .map(w -> WorkoutResponse.from(w, workoutPhotoService.findPhotoUrl(w.getId()).orElse(null)));
+        return getUserWorkouts(userId, null, pageable);
+    }
+
+    // type이 있으면 그 종류만 (CARDIO · STRENGTH)
+    @Transactional(readOnly = true)
+    public Page<WorkoutResponse> getUserWorkouts(Long userId, String type, Pageable pageable) {
+        Page<Workout> page = type == null || type.isBlank()
+                ? workoutRepository.findByUser_IdOrderByIdDesc(userId, pageable)
+                : workoutRepository.findByUser_IdAndTypeOrderByIdDesc(userId, type, pageable);
+        return page.map(w -> WorkoutResponse.from(w, workoutPhotoService.findPhotoUrl(w.getId()).orElse(null)));
     }
 
     @Transactional

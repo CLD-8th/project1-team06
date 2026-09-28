@@ -49,6 +49,20 @@ public class FollowController {
         return followService.users(Long.valueOf(jwt.getSubject()), q, page);
     }
 
+    // 팔로워 목록 (이 사용자를 팔로우하는 사람들, 20명씩)
+    @GetMapping("/users/{id}/followers")
+    public List<UserFollowResponse> followers(@PathVariable Long id, @RequestParam(defaultValue = "0") int page,
+                                              @AuthenticationPrincipal Jwt jwt) {
+        return followService.followers(Long.valueOf(jwt.getSubject()), id, page);
+    }
+
+    // 팔로잉 목록 (이 사용자가 팔로우하는 사람들, 20명씩)
+    @GetMapping("/users/{id}/followees")
+    public List<UserFollowResponse> followees(@PathVariable Long id, @RequestParam(defaultValue = "0") int page,
+                                              @AuthenticationPrincipal Jwt jwt) {
+        return followService.followees(Long.valueOf(jwt.getSubject()), id, page);
+    }
+
     // 프로필 (기록 · 팔로워 · 팔로잉 수, 팔로우 여부)
     @GetMapping("/users/{id}/profile")
     public ProfileResponse profile(@PathVariable Long id, @AuthenticationPrincipal Jwt jwt) {
