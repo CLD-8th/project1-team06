@@ -38,3 +38,6 @@ out/
 
 ### 비밀 정보 ###
 .env
+
+### macOS ###
+.DS_Store
