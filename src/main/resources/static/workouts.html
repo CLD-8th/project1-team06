@@ -4,8 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>오운공 - 운동 기록</title>
+<script>
+  // 저장된 테마를 그리기 전에 적용해 화면이 깜빡이지 않게 함 (저장값이 없으면 시스템 설정을 따름)
+  try {
+    const saved = localStorage.getItem('theme');
+    if (saved === 'light' || saved === 'dark') document.documentElement.dataset.theme = saved;
+  } catch {}
+</script>
 <style>
-  /* 오운공 화면 테마: 쿨톤 무채색 + 라임 포인트 1색. 다크 모드는 시스템 설정을 따름 */
+  /* 오운공 화면 테마: 쿨톤 무채색 + 라임 포인트 1색. 다크 모드는 버튼 선택 > 시스템 설정 순서로 정함 */
   :root {
     color-scheme: light dark;
     --bg: #f3f4f1; --card: #fcfcfb; --raised: #eceee9; --text: #16181a; --sub: #5d6268;
@@ -16,8 +23,17 @@
     --shadow: 0 1px 2px rgba(22, 24, 26, .04), 0 8px 24px rgba(22, 24, 26, .05);
     --ease: cubic-bezier(.16, 1, .3, 1);
   }
+  :root[data-theme="light"] { color-scheme: light; }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #0f1112; --card: #16191b; --raised: #202326; --text: #eceeea; --sub: #9ba1a7;
+    --line: #272b2e; --accent-soft: #26300d; --accent-strong: #c4f031;
+    --danger: #ff6b5f; --ink: #eceeea; --on-ink: #16181a;
+    --cardio-text: #d6f76e;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 8px 24px rgba(0, 0, 0, .25);
+  }
   @media (prefers-color-scheme: dark) {
-    :root {
+    :root:not([data-theme="light"]) {
       --bg: #0f1112; --card: #16191b; --raised: #202326; --text: #eceeea; --sub: #9ba1a7;
       --line: #272b2e; --accent-soft: #26300d; --accent-strong: #c4f031;
       --danger: #ff6b5f; --ink: #eceeea; --on-ink: #16181a;
@@ -25,6 +41,10 @@
       --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 8px 24px rgba(0, 0, 0, .25);
     }
   }
+  body { transition: background-color .3s var(--ease), color .3s var(--ease); }
+  .theme-btn { min-width: 64px; }
+  .auth-top { display: flex; justify-content: flex-end; margin: -16px -8px 4px 0; }
+  .auth-top .btn { padding: 6px 12px; font-size: 13px; }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--text); font-size: 15px; line-height: 1.5;
          font-family: "Pretendard", "Pretendard Variable", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif;
@@ -42,7 +62,7 @@
                          background: var(--raised); transition: border-color .2s, background .2s; }
   header .search input::placeholder { color: var(--sub); }
   header .search input:focus { outline: none; border-color: var(--ink); background: var(--card); }
-  .logo { font-size: 22px; font-weight: 800; letter-spacing: -0.04em; }
+  .logo { font-size: 22px; font-weight: 800; letter-spacing: -0.04em; white-space: nowrap; flex: none; }
   nav { display: flex; gap: 2px; margin-left: auto; padding: 3px; border-radius: 999px; background: var(--raised); }
   nav a { padding: 6px 14px; border-radius: 999px; font-weight: 600; font-size: 14px; color: var(--sub); white-space: nowrap;
           transition: background .2s var(--ease), color .2s; }
@@ -158,6 +178,11 @@
   }
   @media (max-width: 480px) {
     header .inner, header .search, main { padding-left: 16px; padding-right: 16px; }
+    header .inner { gap: 8px; }
+    header .logo { font-size: 20px; }
+    nav a { padding: 6px 10px; font-size: 13px; }
+    header .btn { padding: 7px 10px; font-size: 13px; }
+    .theme-btn { min-width: 0; }
     .section-title, .item, .user-row, .form, .detail { padding-left: 16px; padding-right: 16px; }
     .profile-head { gap: 16px; }
     .avatar.xl { width: 68px; height: 68px; font-size: 26px; }
@@ -169,6 +194,7 @@
 
 <!-- 로그인 · 회원가입 -->
 <section id="auth" class="auth" hidden>
+  <div class="auth-top"><button class="btn btn-gray theme-btn" type="button" data-theme-toggle>다크</button></div>
   <span class="logo">오운공</span>
   <input id="email" class="field" type="email" placeholder="이메일" autocomplete="username">
   <input id="password" class="field" type="password" placeholder="비밀번호 (8자 이상)" autocomplete="current-password">
@@ -188,6 +214,7 @@
         <a id="navFeed" href="#/">피드</a>
         <a id="navMe" href="#/me">내 기록</a>
       </nav>
+      <button class="btn btn-gray theme-btn" type="button" data-theme-toggle>다크</button>
       <button id="logoutBtn" class="btn btn-gray">로그아웃</button>
     </div>
     <div class="search"><input id="searchInput" type="search" placeholder="닉네임으로 사람 검색"></div>
@@ -816,6 +843,34 @@
   window.addEventListener('hashchange', route);
 
   if (token) enter(); else logout();
+</script>
+<script>
+  // 다크/라이트 전환 버튼. 선택은 저장해 다음 방문에도 유지하고, 버튼에는 바꿀 모드를 표시함
+  (() => {
+    const root = document.documentElement;
+    const systemDark = window.matchMedia('(prefers-color-scheme: dark)');
+    const current = () => root.dataset.theme || (systemDark.matches ? 'dark' : 'light');
+    const buttons = document.querySelectorAll('[data-theme-toggle]');
+
+    function render() {
+      const dark = current() === 'dark';
+      buttons.forEach((b) => {
+        b.textContent = dark ? '라이트' : '다크';
+        b.setAttribute('aria-label', dark ? '라이트 모드로 바꾸기' : '다크 모드로 바꾸기');
+        b.setAttribute('aria-pressed', String(dark));
+      });
+    }
+
+    buttons.forEach((b) => b.addEventListener('click', () => {
+      const next = current() === 'dark' ? 'light' : 'dark';
+      root.dataset.theme = next;
+      try { localStorage.setItem('theme', next); } catch {}
+      render();
+    }));
+    // 직접 고른 적이 없으면 시스템 설정이 바뀔 때 버튼 문구도 따라감
+    systemDark.addEventListener('change', render);
+    render();
+  })();
 </script>
 </body>
 </html>
