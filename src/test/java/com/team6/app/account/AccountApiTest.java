@@ -186,4 +186,31 @@ class AccountApiTest {
         mvc.perform(delete("/users/me").contentType("application/json").content(body(PASSWORD)))
                 .andExpect(status().isUnauthorized());
     }
+
+    // jwt() 모의 토큰은 디코더 검증을 건너뛰므로, 실제 로그인 토큰으로 확인함
+    @Test
+    void 탈퇴하면_쓰던_토큰은_바로_401() throws Exception {
+        String login = mvc.perform(post("/auth/login").contentType("application/json")
+                        .content("{\"email\":\"me@test.com\",\"password\":\"" + PASSWORD + "\"}"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        String token = "Bearer " + login.replaceAll(".*\"accessToken\":\"([^\"]+)\".*", "$1");
+
+        mvc.perform(get("/users/me").header("Authorization", token)).andExpect(status().isOk());
+        mvc.perform(delete("/users/me").header("Authorization", token)
+                        .contentType("application/json").content(body(PASSWORD)))
+                .andExpect(status().isNoContent());
+
+        mvc.perform(get("/users/me").header("Authorization", token)).andExpect(status().isUnauthorized());
+        mvc.perform(get("/feed").header("Authorization", token)).andExpect(status().isUnauthorized());
+        mvc.perform(post("/workouts").header("Authorization", token).contentType("application/json")
+                        .content("{\"type\":\"CARDIO\",\"durationMin\":10,\"workoutDate\":\"2026-09-28\"}"))
+                .andExpect(status().isUnauthorized());
+
+        // 같은 이메일로 다시 가입해도 옛 토큰(옛 id)은 계속 막힘
+        mvc.perform(post("/auth/signup").contentType("application/json")
+                        .content("{\"email\":\"me@test.com\",\"password\":\"" + PASSWORD + "\",\"nickname\":\"again\"}"))
+                .andExpect(status().isCreated());
+        mvc.perform(get("/users/me").header("Authorization", token)).andExpect(status().isUnauthorized());
+    }
 }
