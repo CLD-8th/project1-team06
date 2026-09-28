@@ -1,5 +1,6 @@
 package com.team6.app.follow;
 
+import com.team6.app.user.User;
 import com.team6.app.workout.Workout;
 import java.util.List;
 import org.springframework.data.domain.Pageable;
@@ -27,4 +28,26 @@ public interface FollowRepository extends JpaRepository<Follow, Long> {
             order by w.workoutDate desc, w.id desc
             """)
     List<Workout> findFeed(@Param("followerId") Long followerId, Pageable pageable);
+
+    // 사람 찾기: 나를 뺀 사용자 최신 가입순, keyword가 있으면 닉네임에 포함된 사용자만
+    // UserRepository를 건드리지 않으려고 여기에 둠
+    @Query("""
+            select u from User u
+            where u.id <> :userId
+              and (:keyword is null or lower(u.nickname) like lower(concat('%', :keyword, '%')))
+            order by u.id desc
+            """)
+    List<User> findOthers(@Param("userId") Long userId, @Param("keyword") String keyword, Pageable pageable);
+
+    long countByFollowerId(Long followerId);
+
+    long countByFolloweeId(Long followeeId);
+
+    // 프로필의 기록 수. 기록 쪽 저장소(A 파트)를 건드리지 않으려고 여기에 둠
+    @Query("select count(w) from Workout w where w.user.id = :userId")
+    long countWorkouts(@Param("userId") Long userId);
+
+    // 주어진 사용자들 중 내가 팔로우 중인 id만 골라냄 (목록 20명을 쿼리 1번으로 확인)
+    @Query("select f.followee.id from Follow f where f.follower.id = :followerId and f.followee.id in :ids")
+    List<Long> findFolloweeIds(@Param("followerId") Long followerId, @Param("ids") List<Long> ids);
 }

@@ -3,7 +3,9 @@ package com.team6.app.follow;
 import com.team6.app.user.User;
 import com.team6.app.user.UserRepository;
 import com.team6.app.workout.WorkoutResponse;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.PageRequest;
@@ -16,7 +18,7 @@ import org.springframework.web.server.ResponseStatusException;
 @RequiredArgsConstructor
 public class FollowService {
 
-    private static final int FEED_SIZE = 20;
+    private static final int PAGE_SIZE = 20;
 
     private final FollowRepository followRepository;
     private final UserRepository userRepository;
@@ -50,8 +52,40 @@ public class FollowService {
         if (page < 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "page는 0 이상이어야 합니다.");
         }
-        return followRepository.findFeed(userId, PageRequest.of(page, FEED_SIZE)).stream()
+        return followRepository.findFeed(userId, PageRequest.of(page, PAGE_SIZE)).stream()
                 .map(WorkoutResponse::from)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<UserFollowResponse> users(Long userId, String keyword, int page) {
+        if (page < 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "page는 0 이상이어야 합니다.");
+        }
+        String trimmed = keyword == null || keyword.isBlank() ? null : keyword.strip();
+        List<User> users = followRepository.findOthers(userId, trimmed, PageRequest.of(page, PAGE_SIZE));
+        if (users.isEmpty()) {
+            return List.of();
+        }
+        Set<Long> followeeIds = new HashSet<>(
+                followRepository.findFolloweeIds(userId, users.stream().map(User::getId).toList()));
+        return users.stream()
+                .map(u -> new UserFollowResponse(u.getId(), u.getNickname(), followeeIds.contains(u.getId())))
+                .toList();
+    }
+
+    // 프로필 머리 부분: 기록 · 팔로워 · 팔로잉 수와 내가 팔로우 중인지
+    @Transactional(readOnly = true)
+    public ProfileResponse profile(Long viewerId, Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."));
+        return new ProfileResponse(
+                user.getId(),
+                user.getNickname(),
+                followRepository.countWorkouts(userId),
+                followRepository.countByFolloweeId(userId),
+                followRepository.countByFollowerId(userId),
+                followRepository.existsByFollowerIdAndFolloweeId(viewerId, userId),
+                viewerId.equals(userId));
     }
 }

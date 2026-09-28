@@ -152,4 +152,57 @@ class FollowApiTest {
         mvc.perform(get("/feed").param("page", "-1").with(login(me)))
                 .andExpect(status().isBadRequest());
     }
+
+    @Test
+    void 사람_찾기는_나를_빼고_팔로우_여부를_표시() throws Exception {
+        follow(me, alice);
+
+        mvc.perform(get("/users").with(login(me)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].nickname").value("bob"))
+                .andExpect(jsonPath("$[0].following").value(false))
+                .andExpect(jsonPath("$[1].nickname").value("alice"))
+                .andExpect(jsonPath("$[1].following").value(true));
+    }
+
+    @Test
+    void 사람_찾기_토큰_없으면_401() throws Exception {
+        mvc.perform(get("/users")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void 닉네임_검색은_부분_일치_대소문자_무시() throws Exception {
+        mvc.perform(get("/users").param("q", "LI").with(login(me)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].nickname").value("alice"));
+        mvc.perform(get("/users").param("q", "me").with(login(me)))
+                .andExpect(jsonPath("$.length()").value(0));
+        mvc.perform(get("/users").param("q", " ").with(login(me)))
+                .andExpect(jsonPath("$.length()").value(2));
+    }
+
+    @Test
+    void 프로필은_기록_팔로워_팔로잉_수와_팔로우_여부() throws Exception {
+        workoutRepository.save(new Workout(alice, "RUN", 30, null, null, LocalDate.of(2026, 9, 21)));
+        workoutRepository.save(new Workout(alice, "SWIM", 40, null, null, LocalDate.of(2026, 9, 22)));
+        follow(me, alice);
+        follow(bob, alice);
+        follow(alice, bob);
+
+        mvc.perform(get("/users/{id}/profile", alice.getId()).with(login(me)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.nickname").value("alice"))
+                .andExpect(jsonPath("$.workoutCount").value(2))
+                .andExpect(jsonPath("$.followerCount").value(2))
+                .andExpect(jsonPath("$.followeeCount").value(1))
+                .andExpect(jsonPath("$.following").value(true))
+                .andExpect(jsonPath("$.me").value(false));
+        mvc.perform(get("/users/{id}/profile", me.getId()).with(login(me)))
+                .andExpect(jsonPath("$.me").value(true))
+                .andExpect(jsonPath("$.followeeCount").value(1));
+        mvc.perform(get("/users/{id}/profile", 999_999L).with(login(me)))
+                .andExpect(status().isNotFound());
+    }
 }

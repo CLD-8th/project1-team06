@@ -17,7 +17,9 @@
   input, select, textarea, button { font-family: inherit; font-size: 14px; }
 
   header { position: sticky; top: 0; z-index: 2; background: var(--card); border-bottom: 1px solid var(--line); }
-  header .inner { max-width: 600px; margin: 0 auto; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  header .inner { max-width: 600px; margin: 0 auto; padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  header .search { max-width: 600px; margin: 0 auto; padding: 0 16px 10px; }
+  header .search input { width: 100%; padding: 9px 12px; border: 0; border-radius: 8px; background: #efefef; }
   .logo { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
   nav { display: flex; gap: 4px; margin-left: auto; }
   nav a { padding: 7px 12px; border-radius: 8px; font-weight: 600; color: var(--sub); white-space: nowrap; }
@@ -68,6 +70,17 @@
   .author { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-weight: 600; }
   .avatar { flex: none; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center;
             color: #fff; font-weight: 700; font-size: 12px; }
+  .avatar.lg { width: 40px; height: 40px; font-size: 16px; }
+  .avatar.xl { width: 80px; height: 80px; font-size: 32px; }
+  .user-row { display: flex; align-items: center; gap: 12px; padding: 10px 16px; }
+  .user-row .name { flex: 1; min-width: 0; font-weight: 600; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .profile-head { display: flex; gap: 20px; align-items: center; padding: 20px 16px; }
+  .profile-head .info { flex: 1; min-width: 0; }
+  .profile-head .top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .profile-head .nick { font-size: 20px; }
+  .stats { display: flex; gap: 18px; margin-top: 12px; }
+  .stats b { font-weight: 600; }
+  .clickable { cursor: pointer; }
   .follow-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
 
   .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; margin-right: 6px; vertical-align: 1px; }
@@ -116,6 +129,7 @@
       </nav>
       <button id="logoutBtn" class="btn btn-gray">로그아웃</button>
     </div>
+    <div class="search"><input id="searchInput" type="search" placeholder="닉네임으로 사람 검색"></div>
   </header>
   <main id="view"></main>
 </div>
@@ -289,7 +303,8 @@
         return;
       }
       if (page === 0 && r.data.length === 0) {
-        list.appendChild(el('div', 'empty', '아직 관심 피드가 비어 있어요. 다른 사람의 기록 상세에서 팔로우하면 여기에 떠요.'));
+        list.appendChild(el('div', 'empty', '아직 관심 피드가 비어 있어요. 위에서 닉네임을 검색해 팔로우해 보세요.'));
+        suggestUsers(v, seq);
       }
       r.data.forEach((w) => list.appendChild(listItem(w, true)));
       moreWrap.hidden = r.data.length < PAGE_SIZE;
@@ -307,15 +322,31 @@
     return a;
   }
 
-  // 내 기록: 기록 등록 + 내 기록 목록
-  function myView() {
+  // 내 기록: [+ 기록하기]를 누르면 등록 폼이 열리고, 아래에 내 기록 목록
+  function myView(openForm) {
     const { v, seq } = newView();
-    v.appendChild(createForm());
+    const form = createForm();
+    form.hidden = !openForm;
+    v.appendChild(form);
 
     const box = el('section');
     const title = el('div', 'section-title');
     const count = el('span', null, '내 운동 기록');
-    title.appendChild(count);
+    const toggle = el('button', 'btn btn-primary');
+    const renderToggle = () => {
+      toggle.textContent = form.hidden ? '+ 기록하기' : '닫기';
+      toggle.className = 'btn ' + (form.hidden ? 'btn-primary' : 'btn-gray');
+    };
+    toggle.onclick = () => {
+      form.hidden = !form.hidden;
+      renderToggle();
+      if (!form.hidden) {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        form.querySelector('#fDuration').focus();
+      }
+    };
+    renderToggle();
+    title.append(count, toggle);
     box.appendChild(title);
     const list = el('div');
     const moreWrap = el('div', 'more');
@@ -338,7 +369,7 @@
       }
       count.textContent = '내 운동 기록 ' + r.data.totalElements + '개';
       if (page === 0 && r.data.content.length === 0) {
-        list.appendChild(el('div', 'empty', '아직 기록이 없어요. 위에서 첫 운동을 기록해 보세요.'));
+        list.appendChild(el('div', 'empty', '아직 기록이 없어요. [+ 기록하기]로 첫 운동을 기록해 보세요.'));
       }
       r.data.content.forEach((w) => list.appendChild(listItem(w)));
       moreWrap.hidden = r.data.last;
@@ -353,8 +384,9 @@
     item.onclick = () => { location.hash = '#/workouts/' + w.id; };
     const body = el('div', 'body');
     if (withAuthor) {
-      const author = el('div', 'author');
+      const author = el('div', 'author clickable');
       author.append(avatar(w.userId, w.nickname), w.nickname);
+      author.onclick = (e) => { e.stopPropagation(); goProfile(w.userId); };
       body.appendChild(author);
     }
     const kind = el('div', 'kind');
@@ -479,11 +511,16 @@
     // 남의 기록이면 작성자 + 팔로우 버튼 (팔로우 여부를 알려 주는 API가 없어 409를 받으면 팔로우 중으로 바꿈)
     if (!mine) {
       const fr = el('div', 'follow-row');
-      const author = el('div', 'author');
+      const author = el('div', 'author clickable');
       author.style.marginBottom = '0';
       author.append(avatar(w.userId, w.nickname), w.nickname);
-      fr.append(author, followButton(w.userId));
+      author.onclick = () => goProfile(w.userId);
+      fr.appendChild(author);
       d.appendChild(fr);
+      // 팔로우 여부는 프로필 API로 확인한 뒤 버튼을 붙임
+      api('GET', '/users/' + w.userId + '/profile').then((p) => {
+        if (seq === viewSeq && p.ok) fr.appendChild(followButton(w.userId, p.data.following));
+      });
     }
 
     const photo = safePhoto(w.photoUrl);
@@ -548,19 +585,24 @@
     box.appendChild(d);
   }
 
-  function followButton(userId) {
-    const btn = el('button', 'btn btn-primary', '팔로우');
-    let following = false;
+  const goProfile = (id) => { location.hash = '#/users/' + id; };
+
+  // following: 지금 팔로우 중인지. onChange(following) 는 결과가 바뀐 뒤 호출됨
+  function followButton(userId, following, onChange) {
+    const btn = el('button');
+    btn.dataset.userId = userId;
     const render = () => {
       btn.textContent = following ? '팔로우 취소' : '팔로우';
       btn.className = 'btn ' + (following ? 'btn-gray' : 'btn-primary');
     };
-    btn.onclick = async () => {
+    render();
+    btn.onclick = async (e) => {
+      e.stopPropagation();
       if (following && !confirm('팔로우를 취소할까요? 관심 피드에서 이 사람 기록이 빠져요.')) return;
       btn.disabled = true;
       const r = await api(following ? 'DELETE' : 'POST', '/users/' + userId + '/follow');
       btn.disabled = false;
-      if (r.status === 409) {  // 이미 팔로우 중이었음
+      if (r.status === 409) {  // 다른 화면에서 이미 팔로우함
         following = true;
         render();
         return toast('이미 팔로우 중이에요.');
@@ -568,9 +610,115 @@
       if (!r.ok) return toast('처리하지 못했어요. (' + r.status + ')');
       following = !following;
       render();
+      // 같은 사람의 버튼이 화면에 여러 개 있으면 함께 바꿈
+      document.querySelectorAll('button[data-user-id="' + userId + '"]').forEach((b) => {
+        if (b !== btn) b.dispatchEvent(new CustomEvent('sync', { detail: following }));
+      });
       toast(following ? '팔로우했어요. 관심 피드에 기록이 떠요.' : '팔로우를 취소했어요.');
+      if (onChange) onChange(following);
     };
+    btn.addEventListener('sync', (e) => { following = e.detail; render(); });
     return btn;
+  }
+
+  function userRow(u) {
+    const row = el('div', 'user-row');
+    const a = avatar(u.id, u.nickname);
+    a.classList.add('lg', 'clickable');
+    a.onclick = () => goProfile(u.id);
+    const name = el('div', 'name', u.nickname);
+    name.onclick = () => goProfile(u.id);
+    row.append(a, name, followButton(u.id, u.following));
+    return row;
+  }
+
+  // 목록 + '더 보기'. load(page) 는 { ok, items, hasMore } 를 돌려줌
+  function pagedList(box, load, render, emptyText, seq) {
+    const list = el('div');
+    const moreWrap = el('div', 'more');
+    const more = el('button', 'btn-link', '더 보기');
+    moreWrap.appendChild(more);
+    moreWrap.hidden = true;
+    box.append(list, moreWrap);
+    let page = 0;
+    async function next() {
+      more.disabled = true;
+      const r = await load(page);
+      if (seq !== viewSeq) return;
+      more.disabled = false;
+      if (!r.ok) return list.appendChild(el('div', 'empty', '불러오지 못했어요.'));
+      if (page === 0 && r.items.length === 0) list.appendChild(el('div', 'empty', emptyText));
+      r.items.forEach((item) => list.appendChild(render(item)));
+      moreWrap.hidden = !r.hasMore;
+      page++;
+    }
+    more.onclick = next;
+    next();
+  }
+
+  // 사람 찾기 (q 없으면 전체). 배열 응답
+  const loadUsers = (q) => async (page) => {
+    const r = await api('GET', '/users?page=' + page + (q ? '&q=' + encodeURIComponent(q) : ''));
+    return { ok: r.ok, items: r.ok ? r.data : [], hasMore: r.ok && r.data.length === PAGE_SIZE };
+  };
+
+  function suggestUsers(v, seq) {
+    const box = el('section');
+    box.appendChild(el('div', 'section-title', '추천 사용자'));
+    v.appendChild(box);
+    pagedList(box, loadUsers(''), userRow, '아직 다른 사용자가 없어요.', seq);
+  }
+
+  function searchView(q) {
+    const { v, seq } = newView();
+    if (document.activeElement !== $('searchInput')) $('searchInput').value = q;
+    const box = el('section');
+    box.appendChild(el('div', 'section-title', q ? "'" + q + "' 검색 결과" : '모든 사용자'));
+    v.appendChild(box);
+    pagedList(box, loadUsers(q), userRow, '일치하는 사용자가 없어요.', seq);
+  }
+
+  // 프로필: 기록 · 팔로워 · 팔로잉 수, 팔로우 버튼, 그 사람의 기록(6, Page 응답)
+  async function profileView(id) {
+    const { v, seq } = newView();
+    const r = await api('GET', '/users/' + id + '/profile');
+    if (seq !== viewSeq) return;
+    if (!r.ok) {
+      v.appendChild(el('section')).appendChild(el('div', 'empty', r.status === 404 ? '없는 사용자예요.' : '프로필을 불러오지 못했어요.'));
+      return;
+    }
+    const pf = r.data;
+    const head = el('section', 'profile-head');
+    const a = avatar(pf.id, pf.nickname);
+    a.classList.add('xl');
+    const info = el('div', 'info');
+    const top = el('div', 'top');
+    top.appendChild(el('span', 'nick', pf.nickname));
+    const followerNum = el('b', null, pf.followerCount);
+    if (pf.me) {
+      const go = el('a', 'btn btn-gray', '내 기록 관리');
+      go.href = '#/me';
+      top.appendChild(go);
+    } else {
+      top.appendChild(followButton(pf.id, pf.following, (following) => {
+        followerNum.textContent = Number(followerNum.textContent) + (following ? 1 : -1);
+      }));
+    }
+    const stats = el('div', 'stats');
+    const stat = (label, num) => { const x = el('span'); x.append(label + ' ', num); return x; };
+    stats.append(stat('기록', el('b', null, pf.workoutCount)), stat('팔로워', followerNum),
+        stat('팔로잉', el('b', null, pf.followeeCount)));
+    info.append(top, stats);
+    head.append(a, info);
+    v.appendChild(head);
+
+    const box = el('section');
+    box.appendChild(el('div', 'section-title', pf.me ? '내 운동 기록' : pf.nickname + '님의 운동 기록'));
+    v.appendChild(box);
+    pagedList(box, async (page) => {
+      const res = await api('GET', '/users/' + id + '/workouts?page=' + page);
+      return { ok: res.ok, items: res.ok ? res.data.content : [], hasMore: res.ok && !res.data.last };
+    }, (w) => listItem(w), '아직 운동 기록이 없어요.', seq);
   }
 
   function route() {
@@ -578,8 +726,12 @@
     const h = location.hash || '#/';
     $('navFeed').classList.toggle('on', h === '#/' || h === '#');
     $('navMe').classList.toggle('on', h === '#/me');
+    if (!h.startsWith('#/search')) $('searchInput').value = '';
     const m = h.match(/^#\/workouts\/(\d+)$/);
     if (m) return detailView(Number(m[1]));
+    const u = h.match(/^#\/users\/(\d+)$/);
+    if (u) return profileView(Number(u[1]));
+    if (h.startsWith('#/search')) return searchView(new URLSearchParams(h.split('?')[1] || '').get('q') || '');
     if (h === '#/me') return myView();
     feedView();
   }
@@ -590,6 +742,16 @@
   $('password').onkeydown = (e) => { if (e.key === 'Enter' && !signupMode) submitAuth(); };
   $('switchBtn').onclick = () => setSignupMode(!signupMode);
   $('logoutBtn').onclick = () => logout();
+  let searchTimer;
+  $('searchInput').oninput = (e) => {
+    clearTimeout(searchTimer);
+    const q = e.target.value.trim();
+    searchTimer = setTimeout(() => {
+      const target = '#/search' + (q ? '?q=' + encodeURIComponent(q) : '');
+      if (location.hash !== target) location.hash = target;
+    }, 300);
+  };
+  $('searchInput').onfocus = () => { if (!location.hash.startsWith('#/search')) location.hash = '#/search'; };
   window.addEventListener('hashchange', route);
 
   if (token) enter(); else logout();
