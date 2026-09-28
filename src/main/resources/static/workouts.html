@@ -150,6 +150,15 @@
   .badge.CARDIO { background: var(--cardio); color: var(--cardio-text); }
   .badge.STRENGTH { background: var(--strength); color: var(--strength-text); }
 
+  /* 댓글 */
+  .comment-row { display: flex; gap: 10px; padding: 12px 20px; align-items: flex-start; border-top: 1px solid var(--line); }
+  .comment-row .body { flex: 1; min-width: 0; }
+  .comment-row .nick { font-weight: 700; font-size: 13px; margin-bottom: 2px; }
+  .comment-row .content { white-space: pre-wrap; word-break: break-word; }
+  .comment-form { display: flex; gap: 8px; padding: 16px 20px; align-items: flex-start; }
+  .comment-form textarea { flex: 1; min-height: 40px; }
+  .comment-form .btn { flex: none; }
+
   .detail { padding: 20px; }
   .detail .photo { width: 100%; max-height: 440px; object-fit: contain; background: #0f1112; border-radius: var(--radius-ctl); display: block; }
   .detail .no-photo { padding: 36px 16px; text-align: center; color: var(--sub); border: 1px dashed var(--line); border-radius: var(--radius-ctl); }
@@ -674,6 +683,84 @@
       d.appendChild(actions);
     }
     box.appendChild(d);
+
+    const cbox = await commentsSection(w.id, seq);
+    if (seq === viewSeq) v.appendChild(cbox);
+  }
+
+  // 댓글: 목록(인증 불필요) + 등록 + 본인 댓글 삭제
+  async function commentsSection(workoutId, seq) {
+    const box = el('section');
+    const title = el('div', 'section-title');
+    const count = el('span', null, '댓글');
+    title.appendChild(count);
+    box.appendChild(title);
+
+    const form = el('div', 'comment-form');
+    const ta = el('textarea', 'field');
+    ta.maxLength = 300;
+    ta.placeholder = '댓글을 남겨 보세요';
+    ta.rows = 1;
+    const submitBtn = el('button', 'btn btn-primary', '등록');
+    form.append(ta, submitBtn);
+    box.appendChild(form);
+    const msg = el('div', 'msg');
+    msg.style.padding = '0 20px';
+    box.appendChild(msg);
+
+    const list = el('div');
+    box.appendChild(list);
+
+    async function loadComments() {
+      const r = await api('GET', '/workouts/' + workoutId + '/comments');
+      if (seq !== viewSeq) return;
+      list.replaceChildren();
+      if (!r.ok) {
+        list.appendChild(el('div', 'empty', '댓글을 불러오지 못했어요.'));
+        return;
+      }
+      count.textContent = '댓글 ' + r.data.length + '개';
+      if (r.data.length === 0) list.appendChild(el('div', 'empty', '아직 댓글이 없어요. 첫 댓글을 남겨 보세요.'));
+      r.data.forEach((c) => list.appendChild(commentRow(c, loadComments)));
+    }
+
+    submitBtn.onclick = async () => {
+      const content = ta.value.trim();
+      if (!content) return (msg.textContent = '내용을 입력하세요.');
+      submitBtn.disabled = true;
+      const r = await api('POST', '/workouts/' + workoutId + '/comments', { content });
+      submitBtn.disabled = false;
+      if (!r.ok) return (msg.textContent = '댓글을 남기지 못했어요. (' + r.status + ')');
+      ta.value = '';
+      msg.textContent = '';
+      loadComments();
+    };
+    ta.onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitBtn.click(); } };
+
+    await loadComments();
+    return box;
+  }
+
+  function commentRow(c, onDeleted) {
+    const row = el('div', 'comment-row');
+    row.appendChild(avatar(c.userId, c.nickname));
+    const body = el('div', 'body');
+    body.appendChild(el('div', 'nick', c.nickname));
+    body.appendChild(el('div', 'content', c.content));
+    row.appendChild(body);
+    if (me && c.userId === me.id) {
+      const del = el('button', 'btn-link', '삭제');
+      del.style.color = 'var(--danger)';
+      del.onclick = async () => {
+        if (!confirm('댓글을 삭제할까요?')) return;
+        del.disabled = true;
+        const r = await api('DELETE', '/comments/' + c.id);
+        if (!r.ok) { del.disabled = false; return toast('삭제하지 못했어요. (' + r.status + ')'); }
+        onDeleted();
+      };
+      row.appendChild(del);
+    }
+    return row;
   }
 
   const goProfile = (id) => { location.hash = '#/users/' + id; };

@@ -1,5 +1,6 @@
 package com.team6.app.workout;
 
+import com.team6.app.comment.CommentRepository;
 import com.team6.app.ranking.RankingService;
 import com.team6.app.user.User;
 import com.team6.app.user.UserRepository;
@@ -22,6 +23,7 @@ public class WorkoutService {
     private final WorkoutPhotoService workoutPhotoService;
     private final UserRepository userRepository;
     private final RankingService rankingService;
+    private final CommentRepository commentRepository;
 
     @Transactional
     public WorkoutResponse create(Long userId, CreateRequest request) {
@@ -53,6 +55,7 @@ public class WorkoutService {
         if (!workout.getUser().getId().equals(currentUserId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "본인이 작성한 기록만 삭제할 수 있습니다.");
         }
+        commentRepository.deleteByWorkout_Id(workoutId);
         workoutPhotoService.deleteByWorkoutId(workoutId);
         workoutRepository.delete(workout);
         rankingService.subtractScore(currentUserId, workout.getDurationMin(), workout.getWorkoutDate());
