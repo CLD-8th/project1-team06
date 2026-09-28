@@ -30,8 +30,23 @@ public class RankingService {
         if (durationMin <= 0) {
             return;
         }
+        applyScoreDelta(userId, durationMin, workoutDate);
+    }
+
+    // 운동 기록 삭제 시 호출: workoutDate가 속한 주의 랭킹에서 운동 시간(분)만큼 뺌 (A 파트에서 추가)
+    public void subtractScore(Long userId, int durationMin, LocalDate workoutDate) {
+        if (durationMin <= 0) {
+            return;
+        }
+        applyScoreDelta(userId, -durationMin, workoutDate);
+    }
+
+    private void applyScoreDelta(Long userId, int deltaMinutes, LocalDate workoutDate) {
+        if (deltaMinutes == 0) {
+            return;
+        }
         String key = WeeklyRankingKey.of(workoutDate);
-        redisTemplate.opsForZSet().incrementScore(key, String.valueOf(userId), durationMin);
+        redisTemplate.opsForZSet().incrementScore(key, String.valueOf(userId), deltaMinutes);
         redisTemplate.expireAt(key, expireAt(workoutDate));
     }
 
