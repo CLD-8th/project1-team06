@@ -39,6 +39,14 @@ public interface FollowRepository extends JpaRepository<Follow, Long> {
             """)
     List<User> findOthers(@Param("userId") Long userId, @Param("keyword") String keyword, Pageable pageable);
 
+    // 이 사용자를 팔로우하는 사람들 (최근 팔로우 순)
+    @Query("select f.follower from Follow f where f.followee.id = :userId order by f.id desc")
+    List<User> findFollowers(@Param("userId") Long userId, Pageable pageable);
+
+    // 이 사용자가 팔로우하는 사람들 (최근 팔로우 순)
+    @Query("select f.followee from Follow f where f.follower.id = :userId order by f.id desc")
+    List<User> findFollowees(@Param("userId") Long userId, Pageable pageable);
+
     long countByFollowerId(Long followerId);
 
     long countByFolloweeId(Long followeeId);

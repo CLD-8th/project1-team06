@@ -63,14 +63,41 @@ public class FollowService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "page는 0 이상이어야 합니다.");
         }
         String trimmed = keyword == null || keyword.isBlank() ? null : keyword.strip();
-        List<User> users = followRepository.findOthers(userId, trimmed, PageRequest.of(page, PAGE_SIZE));
+        return withFollowing(userId, followRepository.findOthers(userId, trimmed, PageRequest.of(page, PAGE_SIZE)));
+    }
+
+    // 팔로워 목록 (userId를 팔로우하는 사람들). 각 줄에 보는 사람의 팔로우 여부를 붙임
+    @Transactional(readOnly = true)
+    public List<UserFollowResponse> followers(Long viewerId, Long userId, int page) {
+        checkListRequest(userId, page);
+        return withFollowing(viewerId, followRepository.findFollowers(userId, PageRequest.of(page, PAGE_SIZE)));
+    }
+
+    // 팔로잉 목록 (userId가 팔로우하는 사람들)
+    @Transactional(readOnly = true)
+    public List<UserFollowResponse> followees(Long viewerId, Long userId, int page) {
+        checkListRequest(userId, page);
+        return withFollowing(viewerId, followRepository.findFollowees(userId, PageRequest.of(page, PAGE_SIZE)));
+    }
+
+    private void checkListRequest(Long userId, int page) {
+        if (page < 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "page는 0 이상이어야 합니다.");
+        }
+        if (!userRepository.existsById(userId)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다.");
+        }
+    }
+
+    // 목록 20명을 쿼리 1번으로 팔로우 여부 확인
+    private List<UserFollowResponse> withFollowing(Long viewerId, List<User> users) {
         if (users.isEmpty()) {
             return List.of();
         }
         Set<Long> followeeIds = new HashSet<>(
-                followRepository.findFolloweeIds(userId, users.stream().map(User::getId).toList()));
+                followRepository.findFolloweeIds(viewerId, users.stream().map(User::getId).toList()));
         return users.stream()
-                .map(u -> new UserFollowResponse(u.getId(), u.getNickname(), followeeIds.contains(u.getId())))
+                .map(u -> new UserFollowResponse(u.getId(), u.getNickname(), u.getPhotoUrl(), followeeIds.contains(u.getId())))
                 .toList();
     }
 
@@ -82,6 +109,8 @@ public class FollowService {
         return new ProfileResponse(
                 user.getId(),
                 user.getNickname(),
+                user.getPhotoUrl(),
+                user.getCreatedAt().toLocalDate(),
                 followRepository.countWorkouts(userId),
                 followRepository.countByFolloweeId(userId),
                 followRepository.countByFollowerId(userId),

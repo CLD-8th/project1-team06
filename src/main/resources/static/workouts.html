@@ -116,6 +116,55 @@
   .clickable { cursor: pointer; }
   .follow-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
 
+  /* 마이페이지 */
+  img.avatar { object-fit: cover; background: var(--raised); }
+  .profile-head .joined { color: var(--sub); font-size: 13px; margin-top: 4px; }
+  .stats .link { cursor: pointer; }
+  .stats .link:hover b { text-decoration: underline; text-underline-offset: 3px; }
+  .edit-photo { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 4px 20px 16px; }
+  .tile { background: var(--raised); border-radius: var(--radius-ctl); padding: 14px 16px; min-width: 0; }
+  .tile .k { color: var(--sub); font-size: 13px; font-weight: 600; }
+  .tile .v { font-size: 22px; font-weight: 800; letter-spacing: -0.03em; margin-top: 2px; }
+  .tile .s { color: var(--sub); font-size: 13px; }
+  .tile.link { cursor: pointer; transition: background .2s; }
+  .tile.link:hover { background: color-mix(in srgb, var(--raised) 85%, var(--text) 6%); }
+  .streak { margin: 0 20px 20px; padding: 14px 16px; border-radius: var(--radius-ctl); background: var(--accent-soft);
+            color: var(--cardio-text); font-weight: 700; }
+  .streak.off { background: var(--raised); color: var(--sub); font-weight: 600; }
+  .chart { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; align-items: end; height: 170px; padding: 8px 20px 0; }
+  .chart .col { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; gap: 6px; min-width: 0; }
+  .chart .val { font-size: 12px; font-weight: 700; color: var(--sub); white-space: nowrap; }
+  .chart .b { width: 100%; max-width: 34px; min-height: 4px; border-radius: 8px 8px 4px 4px; background: var(--raised);
+              transform-origin: bottom; animation: rise-bar .7s var(--ease) both; }
+  .chart .b.has { background: var(--accent); }
+  .chart-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; padding: 8px 20px 20px; text-align: center;
+                font-size: 13px; color: var(--sub); font-weight: 600; }
+  .chart-days .today { color: var(--text); }
+  @keyframes rise-bar { from { transform: scaleY(0); } to { transform: none; } }
+  .ratio { display: flex; align-items: center; gap: 24px; padding: 8px 20px 20px; }
+  .donut { flex: none; position: relative; width: 120px; height: 120px; border-radius: 50%; }
+  .donut::after { content: ""; position: absolute; inset: 22px; border-radius: 50%; background: var(--card); }
+  .legend { flex: 1; min-width: 0; display: grid; gap: 10px; }
+  .legend .li { display: flex; align-items: center; gap: 10px; }
+  .legend .dot { flex: none; width: 12px; height: 12px; border-radius: 4px; }
+  .legend .pct { margin-left: auto; font-weight: 800; }
+  .legend .sub { color: var(--sub); font-size: 13px; }
+  .toolbar { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 0 20px 14px; flex-wrap: wrap; }
+  .toolbar .seg { min-width: 220px; }
+  .seg.small button { padding: 7px 12px; font-size: 13px; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; }
+  .grid .empty { grid-column: 1 / -1; }
+  .sq { position: relative; aspect-ratio: 1; overflow: hidden; cursor: pointer; background: var(--raised);
+        display: grid; place-items: center; text-align: center; }
+  .sq.CARDIO { background: var(--accent-soft); color: var(--cardio-text); }
+  .sq img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform .3s var(--ease); }
+  .sq:hover img { transform: scale(1.04); }
+  .sq .t { font-weight: 800; font-size: 15px; }
+  .sq .d { font-size: 12px; opacity: .8; }
+  .sq .cap { position: absolute; left: 6px; bottom: 6px; padding: 2px 7px; border-radius: 6px; font-size: 12px; font-weight: 700;
+             background: rgba(0, 0, 0, .6); color: #fff; }
+
   /* 주간 랭킹 */
   .week-nav { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px;
               padding: 16px 20px; border-bottom: 1px solid var(--line); }
@@ -208,6 +257,12 @@
     .week-nav .btn { padding: 7px 10px; font-size: 13px; }
     .rank-row { padding: 12px 16px; gap: 10px; }
     .rank-row .mins { min-width: 72px; font-size: 14px; }
+    .tiles, .ratio, .toolbar { padding-left: 16px; padding-right: 16px; }
+    .chart, .chart-days { padding-left: 12px; padding-right: 12px; gap: 5px; }
+    .streak { margin-left: 16px; margin-right: 16px; }
+    .donut { width: 96px; height: 96px; }
+    .donut::after { inset: 18px; }
+    .ratio { gap: 16px; }
   }
 </style>
 </head>
@@ -233,7 +288,7 @@
       <nav>
         <a id="navFeed" href="#/">피드</a>
         <a id="navRank" href="#/ranking">랭킹</a>
-        <a id="navMe" href="#/me">내 기록</a>
+        <a id="navMe" href="#/me">마이</a>
       </nav>
       <button id="logoutBtn" class="btn btn-gray">로그아웃</button>
     </div>
@@ -435,21 +490,241 @@
     });
   }
 
-  // 사진이 없으므로 닉네임 첫 글자 + id별 고정 색으로 프로필 이미지를 대신함
+  // 프로필 사진이 있으면 사진, 없으면 닉네임 첫 글자 + id별 고정 색
   const COLORS = ['#3f5a7a', '#6b4f7a', '#2f6b5e', '#8a5a3c', '#4f6b00', '#7a4a52', '#35607f', '#5c5f3a'];
-  function avatar(id, nickname) {
+  function avatar(id, nickname, photoUrl) {
+    const photo = safePhoto(photoUrl);
+    if (photo) {
+      const img = el('img', 'avatar');
+      img.src = photo;
+      img.alt = (nickname || '') + ' 프로필 사진';
+      return img;
+    }
     const a = el('div', 'avatar', (nickname || '?').charAt(0).toUpperCase());
     a.style.background = COLORS[id % COLORS.length];
     return a;
   }
 
-  // 내 기록: [+ 기록하기]를 누르면 등록 폼이 열리고, 아래에 내 기록 목록
-  function myView(openForm) {
+  const DAY_LABELS = ['월', '화', '수', '목', '금', '토', '일'];
+  const TYPE_COLORS = { CARDIO: 'var(--accent)', STRENGTH: '#7d8a96' };
+  const formatJoined = (s) => s.replaceAll('-', '. ') + '. 가입';
+
+  // 마이페이지: 1. 프로필 카드 2. 운동 요약 3. 이번 주 그래프 4. 종류 비율 5. 내 기록
+  async function myView(openForm) {
     const { v, seq } = newView();
+    const [pr, sr, wr] = await Promise.all([
+      api('GET', '/users/' + me.id + '/profile'),
+      api('GET', '/users/me/summary'),
+      api('GET', '/users/me/stats/weekly'),
+    ]);
+    if (seq !== viewSeq) return;
+    if (!pr.ok) {
+      v.appendChild(el('section')).appendChild(el('div', 'empty', '마이페이지를 불러오지 못했어요.'));
+      return;
+    }
+    v.appendChild(profileCard(pr.data));
+    if (sr.ok) v.appendChild(summarySection(sr.data));
+    if (wr.ok) v.appendChild(weeklyChart(wr.data));
+    if (sr.ok && wr.ok) v.appendChild(typeRatio(sr.data.byType, wr.data.byType));
+    myRecords(v, seq, openForm);
+  }
+
+  // 1. 프로필 카드 + 수정 패널
+  function profileCard(pf) {
+    const wrap = el('div');
+    const head = el('section', 'profile-head');
+    const a = avatar(pf.id, pf.nickname, pf.photoUrl);
+    a.classList.add('xl');
+    const info = el('div', 'info');
+    const top = el('div', 'top');
+    top.appendChild(el('span', 'nick', pf.nickname));
+    const editBtn = el('button', 'btn btn-gray', '프로필 수정');
+    top.appendChild(editBtn);
+    const stats = el('div', 'stats');
+    const stat = (label, num, href) => {
+      const x = el('span', href ? 'link' : null);
+      x.append(label + ' ', el('b', null, num));
+      if (href) x.onclick = () => { location.hash = href; };
+      return x;
+    };
+    stats.append(stat('기록', pf.workoutCount),
+        stat('팔로워', pf.followerCount, '#/users/' + pf.id + '/followers'),
+        stat('팔로잉', pf.followeeCount, '#/users/' + pf.id + '/followees'));
+    info.append(top, el('div', 'joined', formatJoined(pf.joinedAt)), stats);
+    head.append(a, info);
+
+    const panel = editPanel(pf);
+    panel.hidden = true;
+    editBtn.onclick = () => {
+      panel.hidden = !panel.hidden;
+      editBtn.textContent = panel.hidden ? '프로필 수정' : '닫기';
+      if (!panel.hidden) panel.querySelector('#pNick').focus();
+    };
+    wrap.append(head, panel);
+    return wrap;
+  }
+
+  function editPanel(pf) {
+    const box = el('section');
+    box.appendChild(el('div', 'section-title', '프로필 수정'));
+    const f = el('div', 'form');
+    f.innerHTML = `
+      <label class="lbl" for="pNick">닉네임</label>
+      <input id="pNick" class="field" maxlength="30">
+      <label class="lbl">프로필 사진</label>
+      <div class="edit-photo">
+        <span id="pPreview"></span>
+        <input id="pPhoto" type="file" accept="image/jpeg,image/png,image/webp">
+        <button id="pPhotoDel" type="button" class="btn btn-danger">사진 삭제</button>
+      </div>
+      <div class="hint">JPG · PNG · WEBP, 5MB 이하. 고르면 바로 바뀌어요.</div>
+      <button id="pSave" class="btn btn-primary full">닉네임 저장</button>
+      <div id="pMsg" class="msg"></div>`;
+    box.appendChild(f);
+    const q = (id) => f.querySelector('#' + id);
+    q('pNick').value = pf.nickname;
+    const preview = (url) => {
+      const a = avatar(pf.id, q('pNick').value || pf.nickname, url);
+      a.classList.add('lg');
+      q('pPreview').replaceChildren(a);
+      q('pPhotoDel').hidden = !url;
+    };
+    preview(pf.photoUrl);
+
+    q('pSave').onclick = async () => {
+      const nick = q('pNick').value.trim();
+      if (!nick) return (q('pMsg').textContent = '닉네임을 입력하세요.');
+      q('pSave').disabled = true;
+      const r = await api('PATCH', '/users/me', { nickname: nick });
+      q('pSave').disabled = false;
+      if (!r.ok) return (q('pMsg').textContent = r.status === 400 ? '닉네임은 1~30자로 입력하세요.' : '저장하지 못했어요. (' + r.status + ')');
+      me.nickname = r.data.nickname;
+      toast('닉네임을 바꿨어요.');
+      myView();
+    };
+    q('pPhoto').onchange = async () => {
+      const file = q('pPhoto').files[0];
+      if (!file) return;
+      const err = checkPhoto(file);
+      if (err) return toast(err);
+      const form = new FormData();
+      form.append('photo', file);
+      const r = await api('POST', '/users/me/photo', form);
+      if (!r.ok) return toast(MESSAGES.photo[r.status] || '사진을 올리지 못했어요. (' + r.status + ')');
+      toast('프로필 사진을 바꿨어요.');
+      myView();
+    };
+    q('pPhotoDel').onclick = async () => {
+      if (!confirm('프로필 사진을 삭제할까요?')) return;
+      const r = await api('DELETE', '/users/me/photo');
+      if (!r.ok) return toast('삭제하지 못했어요. (' + r.status + ')');
+      toast('프로필 사진을 삭제했어요.');
+      myView();
+    };
+    return box;
+  }
+
+  // 2. 운동 요약
+  function summarySection(sm) {
+    const box = el('section');
+    box.appendChild(el('div', 'section-title', '운동 요약'));
+    const tiles = el('div', 'tiles');
+    const tile = (k, value, sub, href) => {
+      const t = el('div', 'tile' + (href ? ' link' : ''));
+      t.append(el('div', 'k', k), el('div', 'v', value));
+      if (sub) t.appendChild(el('div', 's', sub));
+      if (href) t.onclick = () => { location.hash = href; };
+      return t;
+    };
+    tiles.append(
+      tile('누적 운동 시간', formatMinutes(sm.totalMinutes), '전체 ' + sm.totalCount + '회'),
+      tile('이번 주 운동', formatMinutes(sm.weekMinutes), sm.weekCount + '회'),
+      tile('이번 주 랭킹', sm.weekRank ? sm.weekRank + '위' : '-', sm.weekRank ? '랭킹 보기 →' : '기록하면 순위에 올라요', '#/ranking'),
+      tile('연속 운동', sm.streakDays + '일', sm.streakDays ? '오늘까지 이어지는 중' : '아직 없어요'));
+    box.appendChild(tiles);
+    const streak = el('div', 'streak' + (sm.streakDays ? '' : ' off'),
+        sm.streakDays >= 2 ? '🔥 ' + sm.streakDays + '일 연속 오운공 중!'
+          : sm.streakDays === 1 ? '🔥 연속 운동 1일째. 내일도 이어 가요!'
+          : '오늘 운동을 기록하고 연속 기록을 시작해 보세요.');
+    box.appendChild(streak);
+    return box;
+  }
+
+  // 3. 이번 주 요일별 운동 시간 (11. 주간 통계)
+  function weeklyChart(ws) {
+    const box = el('section');
+    const title = el('div', 'section-title');
+    title.append(el('span', null, '이번 주 운동'),
+        el('span', 'hint', ws.workoutCount + '회 · ' + formatMinutes(ws.totalMinutes)));
+    box.appendChild(title);
+    const max = Math.max(...ws.days.map((d) => d.minutes), 1);
+    const chart = el('div', 'chart');
+    const days = el('div', 'chart-days');
+    const todayStr = today();
+    ws.days.forEach((d, i) => {
+      const col = el('div', 'col');
+      col.appendChild(el('div', 'val', d.minutes ? d.minutes + '분' : ''));
+      const b = el('div', 'b' + (d.minutes ? ' has' : ''));
+      b.style.height = d.minutes ? Math.max(6, Math.round((d.minutes / max) * 120)) + 'px' : '4px';
+      b.title = d.date + ' ' + d.minutes + '분';
+      col.appendChild(b);
+      chart.appendChild(col);
+      days.appendChild(el('span', d.date === todayStr ? 'today' : null, DAY_LABELS[i]));
+    });
+    box.append(chart, days);
+    return box;
+  }
+
+  // 4. 운동 종류 비율 (시간 기준). 전체 기간 / 이번 주 전환
+  function typeRatio(allTypes, weekTypes) {
+    const box = el('section');
+    const title = el('div', 'section-title');
+    const seg = el('div', 'seg small');
+    const bAll = el('button', 'on', '전체');
+    const bWeek = el('button', null, '이번 주');
+    seg.append(bAll, bWeek);
+    title.append(el('span', null, '운동 종류 비율'), seg);
+    box.appendChild(title);
+    const body = el('div');
+    box.appendChild(body);
+    const render = (types) => {
+      body.replaceChildren();
+      const total = types.reduce((sum, t) => sum + t.minutes, 0);
+      if (!total) return body.appendChild(el('div', 'empty', '아직 기록이 없어요.'));
+      const ratio = el('div', 'ratio');
+      const donut = el('div', 'donut');
+      const legend = el('div', 'legend');
+      let acc = 0;
+      const stops = [];
+      ['CARDIO', 'STRENGTH'].forEach((type) => {
+        const t = types.find((x) => x.type === type) || { count: 0, minutes: 0 };
+        const pct = Math.round((t.minutes / total) * 100);
+        stops.push(TYPE_COLORS[type] + ' ' + acc + '% ' + (acc + (t.minutes / total) * 100) + '%');
+        acc += (t.minutes / total) * 100;
+        const li = el('div', 'li');
+        const dot = el('span', 'dot');
+        dot.style.background = TYPE_COLORS[type];
+        const name = el('div');
+        name.append(el('div', null, TYPE_LABELS[type]), el('div', 'sub', t.count + '회 · ' + formatMinutes(t.minutes)));
+        li.append(dot, name, el('span', 'pct', pct + '%'));
+        legend.appendChild(li);
+      });
+      donut.style.background = 'conic-gradient(' + stops.join(', ') + ')';
+      donut.setAttribute('role', 'img');
+      donut.setAttribute('aria-label', legend.innerText.replace(/\n/g, ' '));
+      ratio.append(donut, legend);
+      body.appendChild(ratio);
+    };
+    bAll.onclick = () => { bAll.classList.add('on'); bWeek.classList.remove('on'); render(allTypes); };
+    bWeek.onclick = () => { bWeek.classList.add('on'); bAll.classList.remove('on'); render(weekTypes); };
+    render(allTypes);
+    return box;
+  }
+
+  // 5. 내 기록: 종류 탭, 사진 그리드 / 목록 전환, [+ 기록하기]
+  function myRecords(v, seq, openForm) {
     const form = createForm();
     form.hidden = !openForm;
-    v.appendChild(form);
-
     const box = el('section');
     const title = el('div', 'section-title');
     const count = el('span', null, '내 운동 기록');
@@ -462,21 +737,96 @@
       form.hidden = !form.hidden;
       renderToggle();
       if (!form.hidden) {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        form.querySelector('#fDuration').focus();
+        form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        form.querySelector('#fDuration').focus({ preventScroll: true });
       }
     };
     renderToggle();
     title.append(count, toggle);
     box.appendChild(title);
-    v.appendChild(box);
 
-    // 6. 특정 사용자 기록 목록 (Page 응답)
-    pagedList(box, async (page) => pageResult(await api('GET', '/users/' + me.id + '/workouts?page=' + page + '&size=' + WORKOUT_PAGE)),
-      (w) => listItem(w), '아직 기록이 없어요. [+ 기록하기]로 첫 운동을 기록해 보세요.', seq, {
-        errorText: '기록을 불러오지 못했어요.',
-        onLoad: (r) => { count.textContent = '내 운동 기록 ' + r.total + '개'; },
+    const toolbar = el('div', 'toolbar');
+    const typeSeg = el('div', 'seg small');
+    const viewSeg = el('div', 'seg small');
+    toolbar.append(typeSeg, viewSeg);
+    box.appendChild(toolbar);
+    const listBox = el('div');
+    box.appendChild(listBox);
+    v.append(form, box);
+
+    let type = '';
+    let mode = 'grid';
+    const makeSeg = (seg, options, current, onPick) => {
+      seg.replaceChildren();
+      options.forEach(([value, label]) => {
+        const b = el('button', value === current ? 'on' : null, label);
+        b.type = 'button';
+        b.onclick = () => onPick(value);
+        seg.appendChild(b);
       });
+    };
+    const load = () => {
+      makeSeg(typeSeg, [['', '전체'], ['CARDIO', '유산소'], ['STRENGTH', '무산소']], type, (t) => { type = t; load(); });
+      makeSeg(viewSeg, [['grid', '▦ 사진'], ['list', '☰ 목록']], mode, (m) => { mode = m; load(); });
+      listBox.replaceChildren();
+      const size = mode === 'grid' ? 9 : WORKOUT_PAGE;
+      pagedList(listBox, async (page) => pageResult(await api('GET', '/users/' + me.id + '/workouts?page=' + page
+          + '&size=' + size + (type ? '&type=' + type : ''))),
+        mode === 'grid' ? gridTile : (w) => listItem(w),
+        type ? '이 종류의 기록이 없어요.' : '아직 기록이 없어요. [+ 기록하기]로 첫 운동을 기록해 보세요.', seq, {
+          errorText: '기록을 불러오지 못했어요.',
+          listClass: mode === 'grid' ? 'grid' : null,
+          onLoad: (r) => { count.textContent = '내 운동 기록 ' + r.total + '개'; },
+        });
+    };
+    load();
+  }
+
+  // 인스타 프로필처럼 정사각형 칸. 인증 사진이 없으면 종류 · 시간을 글자로 보여 줌
+  function gridTile(w) {
+    const t = el('div', 'sq ' + w.type);
+    t.onclick = () => { location.hash = '#/workouts/' + w.id; };
+    t.title = (TYPE_LABELS[w.type] || w.type) + ' ' + summary(w) + ' · ' + formatDate(w.workoutDate);
+    const photo = safePhoto(w.photoUrl);
+    if (photo) {
+      const img = el('img');
+      img.src = photo;
+      img.alt = '인증 사진';
+      img.loading = 'lazy';
+      t.append(img, el('span', 'cap', w.durationMin + '분'));
+    } else {
+      const inner = el('div');
+      inner.append(el('div', 't', (TYPE_LABELS[w.type] || w.type) + ' ' + w.durationMin + '분'),
+          el('div', 'd', formatDate(w.workoutDate)));
+      t.appendChild(inner);
+    }
+    return t;
+  }
+
+  // 팔로워 · 팔로잉 목록 (탭으로 전환)
+  async function followListView(userId, kind) {
+    const { v, seq } = newView();
+    const pr = await api('GET', '/users/' + userId + '/profile');
+    if (seq !== viewSeq) return;
+    const box = el('section');
+    const title = el('div', 'section-title');
+    const back = el('button', 'btn-link', '← ' + (pr.ok ? pr.data.nickname : '프로필'));
+    back.onclick = () => (pr.ok && pr.data.me ? (location.hash = '#/me') : goProfile(userId));
+    const seg = el('div', 'seg small');
+    [['followers', '팔로워' + (pr.ok ? ' ' + pr.data.followerCount : '')],
+     ['followees', '팔로잉' + (pr.ok ? ' ' + pr.data.followeeCount : '')]].forEach(([k, label]) => {
+      const b = el('button', k === kind ? 'on' : null, label);
+      b.onclick = () => { location.hash = '#/users/' + userId + '/' + k; };
+      seg.appendChild(b);
+    });
+    title.append(back, seg);
+    box.appendChild(title);
+    v.appendChild(box);
+    pagedList(box, async (page) => {
+      const r = await api('GET', '/users/' + userId + '/' + kind + '?page=' + page);
+      return { ok: r.ok, items: r.ok ? r.data : [], hasMore: r.ok && r.data.length === PAGE_SIZE };
+    }, userRow, kind === 'followers' ? '아직 팔로워가 없어요.' : '아직 팔로우한 사람이 없어요.', seq,
+    { errorText: '목록을 불러오지 못했어요.' });
   }
 
   function listItem(w, withAuthor) {
@@ -801,12 +1151,14 @@
 
   function userRow(u) {
     const row = el('div', 'user-row');
-    const a = avatar(u.id, u.nickname);
+    const a = avatar(u.id, u.nickname, u.photoUrl);
     a.classList.add('lg', 'clickable');
     a.onclick = () => goProfile(u.id);
-    const name = el('div', 'name', u.nickname);
+    const isMe = me && u.id === me.id;
+    const name = el('div', 'name', u.nickname + (isMe ? ' (나)' : ''));
     name.onclick = () => goProfile(u.id);
-    row.append(a, name, followButton(u.id, u.following));
+    row.append(a, name);
+    if (!isMe) row.appendChild(followButton(u.id, u.following));
     return row;
   }
 
@@ -822,7 +1174,7 @@
   // 목록 + 가운데 정렬 페이지 번호. load(page) 는 { ok, items, hasMore, totalPages? } 를 돌려줌
   // 전체 페이지 수를 모르는 배열 응답은 지금까지 확인한 페이지(+다음 페이지)까지만 번호로 보여 줌
   function pagedList(box, load, render, emptyText, seq, opts = {}) {
-    const list = el('div');
+    const list = el('div', opts.listClass || null);
     const pager = el('div', 'pager');
     pager.setAttribute('role', 'navigation');
     pager.setAttribute('aria-label', '페이지');
@@ -918,14 +1270,14 @@
     }
     const pf = r.data;
     const head = el('section', 'profile-head');
-    const a = avatar(pf.id, pf.nickname);
+    const a = avatar(pf.id, pf.nickname, pf.photoUrl);
     a.classList.add('xl');
     const info = el('div', 'info');
     const top = el('div', 'top');
     top.appendChild(el('span', 'nick', pf.nickname));
     const followerNum = el('b', null, pf.followerCount);
     if (pf.me) {
-      const go = el('a', 'btn btn-gray', '내 기록 관리');
+      const go = el('a', 'btn btn-gray', '마이페이지');
       go.href = '#/me';
       top.appendChild(go);
     } else {
@@ -934,10 +1286,16 @@
       }));
     }
     const stats = el('div', 'stats');
-    const stat = (label, num) => { const x = el('span'); x.append(label + ' ', num); return x; };
-    stats.append(stat('기록', el('b', null, pf.workoutCount)), stat('팔로워', followerNum),
-        stat('팔로잉', el('b', null, pf.followeeCount)));
-    info.append(top, stats);
+    const stat = (label, num, href) => {
+      const x = el('span', href ? 'link' : null);
+      x.append(label + ' ', num);
+      if (href) x.onclick = () => { location.hash = href; };
+      return x;
+    };
+    stats.append(stat('기록', el('b', null, pf.workoutCount)),
+        stat('팔로워', followerNum, '#/users/' + pf.id + '/followers'),
+        stat('팔로잉', el('b', null, pf.followeeCount), '#/users/' + pf.id + '/followees'));
+    info.append(top, el('div', 'joined', formatJoined(pf.joinedAt)), stats);
     head.append(a, info);
     v.appendChild(head);
 
@@ -1031,6 +1389,8 @@
     if (m) return detailView(Number(m[1]));
     const u = h.match(/^#\/users\/(\d+)$/);
     if (u) return profileView(Number(u[1]));
+    const fl = h.match(/^#\/users\/(\d+)\/(followers|followees)$/);
+    if (fl) return followListView(Number(fl[1]), fl[2]);
     if (h.startsWith('#/search')) return searchView(new URLSearchParams(h.split('?')[1] || '').get('q') || '');
     if (h === '#/me') return myView();
     if (h.startsWith('#/ranking')) {

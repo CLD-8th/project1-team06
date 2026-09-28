@@ -34,10 +34,26 @@ public class User {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    // 프로필 사진 저장 키 (app.upload-dir 안의 파일명). 없으면 null. /photos/{key}로 조회함
+    @Column(name = "profile_image_key", length = 255)
+    private String profileImageKey;
+
     public User(String email, String password, String nickname) {
         this.email = email;
         this.password = password;
         this.nickname = nickname;
         this.createdAt = LocalDateTime.now();
+    }
+
+    public void changeNickname(String nickname) {
+        this.nickname = nickname;
+    }
+
+    public void changeProfileImage(String profileImageKey) {
+        this.profileImageKey = profileImageKey;
+    }
+
+    public String getPhotoUrl() {
+        return profileImageKey == null ? null : "/photos/" + profileImageKey;
     }
 }
