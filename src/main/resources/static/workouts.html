@@ -231,7 +231,8 @@
 <div id="toast" class="toast"></div>
 
 <script>
-  const PAGE_SIZE = 20;
+  const PAGE_SIZE = 20;       // 서버가 한 번에 주는 개수 (피드, 사람 찾기)
+  const WORKOUT_PAGE = 8;     // 운동 기록 목록을 한 화면에 보여 줄 개수
   const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
   const PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
   const TYPE_LABELS = { CARDIO: '유산소', STRENGTH: '무산소' };
@@ -380,10 +381,35 @@
     box.appendChild(el('div', 'section-title', '관심 피드'));
     v.appendChild(box);
 
+    // 서버는 20개씩 고정이라 받아 둔 서버 페이지를 WORKOUT_PAGE 개씩 잘라서 보여 줌
+    const serverPages = new Map();
+    async function serverPage(n) {
+      if (!serverPages.has(n)) {
+        const r = await api('GET', '/feed?page=' + n);
+        if (!r.ok) return null;
+        serverPages.set(n, r.data);
+      }
+      return serverPages.get(n);
+    }
+
     let suggested = false;
     pagedList(box, async (page) => {
-      const r = await api('GET', '/feed?page=' + page);
-      return { ok: r.ok, items: r.ok ? r.data : [], hasMore: r.ok && r.data.length === PAGE_SIZE };
+      const start = page * WORKOUT_PAGE;
+      const end = start + WORKOUT_PAGE;
+      const items = [];
+      let n = Math.floor(start / PAGE_SIZE);
+      let data;
+      // 이 화면에 필요한 구간과, 다음 화면이 있는지 알 수 있는 한 칸 뒤까지 모음
+      while ((data = await serverPage(n)) !== null) {
+        data.forEach((w, i) => {
+          const idx = n * PAGE_SIZE + i;
+          if (idx >= start && idx <= end) items.push(w);
+        });
+        if (data.length < PAGE_SIZE || (n + 1) * PAGE_SIZE > end) break;
+        n++;
+      }
+      if (data === null) return { ok: false, items: [], hasMore: false };
+      return { ok: true, items: items.slice(0, WORKOUT_PAGE), hasMore: items.length > WORKOUT_PAGE };
     }, (w) => listItem(w, true), '아직 관심 피드가 비어 있어요. 위에서 닉네임을 검색해 팔로우해 보세요.', seq, {
       errorText: '피드를 불러오지 못했어요.',
       onLoad: (r, page) => {
@@ -432,7 +458,7 @@
     v.appendChild(box);
 
     // 6. 특정 사용자 기록 목록 (Page 응답)
-    pagedList(box, async (page) => pageResult(await api('GET', '/users/' + me.id + '/workouts?page=' + page)),
+    pagedList(box, async (page) => pageResult(await api('GET', '/users/' + me.id + '/workouts?page=' + page + '&size=' + WORKOUT_PAGE)),
       (w) => listItem(w), '아직 기록이 없어요. [+ 기록하기]로 첫 운동을 기록해 보세요.', seq, {
         errorText: '기록을 불러오지 못했어요.',
         onLoad: (r) => { count.textContent = '내 운동 기록 ' + r.total + '개'; },
@@ -826,7 +852,7 @@
     const box = el('section');
     box.appendChild(el('div', 'section-title', pf.me ? '내 운동 기록' : pf.nickname + '님의 운동 기록'));
     v.appendChild(box);
-    pagedList(box, async (page) => pageResult(await api('GET', '/users/' + id + '/workouts?page=' + page)),
+    pagedList(box, async (page) => pageResult(await api('GET', '/users/' + id + '/workouts?page=' + page + '&size=' + WORKOUT_PAGE)),
       (w) => listItem(w), '아직 운동 기록이 없어요.', seq);
   }
 
