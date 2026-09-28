@@ -4,47 +4,18 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>오운공 - 운동 기록</title>
-<script>
-  // 저장된 테마를 그리기 전에 적용해 화면이 깜빡이지 않게 함 (저장값이 없으면 시스템 설정을 따름)
-  try {
-    const saved = localStorage.getItem('theme');
-    if (saved === 'light' || saved === 'dark') document.documentElement.dataset.theme = saved;
-  } catch {}
-</script>
 <style>
-  /* 오운공 화면 테마: 쿨톤 무채색 + 라임 포인트 1색. 다크 모드는 버튼 선택 > 시스템 설정 순서로 정함 */
+  /* 오운공 화면 테마: 다크 기본. 무채색 바탕 + 라임 포인트 1색 */
   :root {
-    color-scheme: light dark;
-    --bg: #f3f4f1; --card: #fcfcfb; --raised: #eceee9; --text: #16181a; --sub: #5d6268;
-    --line: #e1e3de; --accent: #c4f031; --accent-ink: #16181a; --accent-soft: #eef9cf; --accent-strong: #4f6b00;
-    --danger: #c8372d; --ink: #16181a; --on-ink: #f6f7f4;
-    --cardio: var(--accent-soft); --cardio-text: #3d5400; --strength: var(--raised); --strength-text: var(--text);
-    --radius-card: 16px; --radius-ctl: 12px;
-    --shadow: 0 1px 2px rgba(22, 24, 26, .04), 0 8px 24px rgba(22, 24, 26, .05);
-    --ease: cubic-bezier(.16, 1, .3, 1);
-  }
-  :root[data-theme="light"] { color-scheme: light; }
-  :root[data-theme="dark"] {
     color-scheme: dark;
     --bg: #0f1112; --card: #16191b; --raised: #202326; --text: #eceeea; --sub: #9ba1a7;
-    --line: #272b2e; --accent-soft: #26300d; --accent-strong: #c4f031;
+    --line: #272b2e; --accent: #c4f031; --accent-ink: #16181a; --accent-soft: #26300d; --accent-strong: #c4f031;
     --danger: #ff6b5f; --ink: #eceeea; --on-ink: #16181a;
-    --cardio-text: #d6f76e;
+    --cardio: var(--accent-soft); --cardio-text: #d6f76e; --strength: var(--raised); --strength-text: var(--text);
+    --radius-card: 16px; --radius-ctl: 12px;
     --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 8px 24px rgba(0, 0, 0, .25);
+    --ease: cubic-bezier(.16, 1, .3, 1);
   }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      --bg: #0f1112; --card: #16191b; --raised: #202326; --text: #eceeea; --sub: #9ba1a7;
-      --line: #272b2e; --accent-soft: #26300d; --accent-strong: #c4f031;
-      --danger: #ff6b5f; --ink: #eceeea; --on-ink: #16181a;
-      --cardio-text: #d6f76e;
-      --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 8px 24px rgba(0, 0, 0, .25);
-    }
-  }
-  body { transition: background-color .3s var(--ease), color .3s var(--ease); }
-  .theme-btn { min-width: 64px; }
-  .auth-top { display: flex; justify-content: flex-end; margin: -16px -8px 4px 0; }
-  .auth-top .btn { padding: 6px 12px; font-size: 13px; }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--text); font-size: 15px; line-height: 1.5;
          font-family: "Pretendard", "Pretendard Variable", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif;
@@ -159,7 +130,16 @@
   .actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
   .empty { color: var(--sub); text-align: center; padding: 36px 24px; line-height: 1.6; }
-  .more { display: flex; justify-content: center; padding: 8px 20px 16px; }
+  main { overflow-anchor: none; }
+  .pager { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 6px;
+           padding: 14px 20px 18px; border-top: 1px solid var(--line); }
+  .pager button { min-width: 36px; height: 36px; padding: 0 12px; border: 1px solid transparent; border-radius: 10px;
+                  background: transparent; color: var(--sub); font-weight: 700; font-size: 14px; cursor: pointer;
+                  transition: background .2s, color .2s, border-color .2s; }
+  .pager button:hover:not(:disabled) { color: var(--text); border-color: var(--line); }
+  .pager button[aria-current="page"] { background: var(--accent); color: var(--accent-ink); }
+  .pager button:disabled { opacity: .35; cursor: default; }
+  .pager .step { color: var(--text); }
   .msg { min-height: 20px; margin-top: 10px; font-size: 13px; color: var(--danger); }
   .toast { position: fixed; left: 50%; bottom: 28px; transform: translate(-50%, 12px); background: var(--ink); color: var(--on-ink);
            padding: 12px 18px; border-radius: 999px; font-size: 14px; font-weight: 600; opacity: 0;
@@ -182,7 +162,6 @@
     header .logo { font-size: 20px; }
     nav a { padding: 6px 10px; font-size: 13px; }
     header .btn { padding: 7px 10px; font-size: 13px; }
-    .theme-btn { min-width: 0; }
     .section-title, .item, .user-row, .form, .detail { padding-left: 16px; padding-right: 16px; }
     .profile-head { gap: 16px; }
     .avatar.xl { width: 68px; height: 68px; font-size: 26px; }
@@ -194,7 +173,6 @@
 
 <!-- 로그인 · 회원가입 -->
 <section id="auth" class="auth" hidden>
-  <div class="auth-top"><button class="btn btn-gray theme-btn" type="button" data-theme-toggle>다크</button></div>
   <span class="logo">오운공</span>
   <input id="email" class="field" type="email" placeholder="이메일" autocomplete="username">
   <input id="password" class="field" type="password" placeholder="비밀번호 (8자 이상)" autocomplete="current-password">
@@ -214,7 +192,6 @@
         <a id="navFeed" href="#/">피드</a>
         <a id="navMe" href="#/me">내 기록</a>
       </nav>
-      <button class="btn btn-gray theme-btn" type="button" data-theme-toggle>다크</button>
       <button id="logoutBtn" class="btn btn-gray">로그아웃</button>
     </div>
     <div class="search"><input id="searchInput" type="search" placeholder="닉네임으로 사람 검색"></div>
@@ -372,34 +349,21 @@
     const { v, seq } = newView();
     const box = el('section');
     box.appendChild(el('div', 'section-title', '관심 피드'));
-    const list = el('div');
-    const moreWrap = el('div', 'more');
-    const more = el('button', 'btn-link', '더 보기');
-    moreWrap.appendChild(more);
-    moreWrap.hidden = true;
-    box.append(list, moreWrap);
     v.appendChild(box);
 
-    let page = 0;
-    async function load() {
-      more.disabled = true;
+    let suggested = false;
+    pagedList(box, async (page) => {
       const r = await api('GET', '/feed?page=' + page);
-      if (seq !== viewSeq) return;
-      more.disabled = false;
-      if (!r.ok) {
-        list.appendChild(el('div', 'empty', '피드를 불러오지 못했어요.'));
-        return;
-      }
-      if (page === 0 && r.data.length === 0) {
-        list.appendChild(el('div', 'empty', '아직 관심 피드가 비어 있어요. 위에서 닉네임을 검색해 팔로우해 보세요.'));
-        suggestUsers(v, seq);
-      }
-      r.data.forEach((w) => list.appendChild(listItem(w, true)));
-      moreWrap.hidden = r.data.length < PAGE_SIZE;
-      page++;
-    }
-    more.onclick = load;
-    load();
+      return { ok: r.ok, items: r.ok ? r.data : [], hasMore: r.ok && r.data.length === PAGE_SIZE };
+    }, (w) => listItem(w, true), '아직 관심 피드가 비어 있어요. 위에서 닉네임을 검색해 팔로우해 보세요.', seq, {
+      errorText: '피드를 불러오지 못했어요.',
+      onLoad: (r, page) => {
+        if (page === 0 && r.items.length === 0 && !suggested) {
+          suggested = true;
+          suggestUsers(v, seq);
+        }
+      },
+    });
   }
 
   // 사진이 없으므로 닉네임 첫 글자 + id별 고정 색으로 프로필 이미지를 대신함
@@ -436,35 +400,14 @@
     renderToggle();
     title.append(count, toggle);
     box.appendChild(title);
-    const list = el('div');
-    const moreWrap = el('div', 'more');
-    const more = el('button', 'btn-link', '더 보기');
-    moreWrap.appendChild(more);
-    moreWrap.hidden = true;
-    box.append(list, moreWrap);
     v.appendChild(box);
 
-    // 6. 특정 사용자 기록 목록 (Page 응답: content, last, totalElements)
-    let page = 0;
-    async function load() {
-      more.disabled = true;
-      const r = await api('GET', '/users/' + me.id + '/workouts?page=' + page);
-      if (seq !== viewSeq) return;
-      more.disabled = false;
-      if (!r.ok) {
-        list.appendChild(el('div', 'empty', '기록을 불러오지 못했어요.'));
-        return;
-      }
-      count.textContent = '내 운동 기록 ' + r.data.totalElements + '개';
-      if (page === 0 && r.data.content.length === 0) {
-        list.appendChild(el('div', 'empty', '아직 기록이 없어요. [+ 기록하기]로 첫 운동을 기록해 보세요.'));
-      }
-      r.data.content.forEach((w) => list.appendChild(listItem(w)));
-      moreWrap.hidden = r.data.last;
-      page++;
-    }
-    more.onclick = load;
-    load();
+    // 6. 특정 사용자 기록 목록 (Page 응답)
+    pagedList(box, async (page) => pageResult(await api('GET', '/users/' + me.id + '/workouts?page=' + page)),
+      (w) => listItem(w), '아직 기록이 없어요. [+ 기록하기]로 첫 운동을 기록해 보세요.', seq, {
+        errorText: '기록을 불러오지 못했어요.',
+        onLoad: (r) => { count.textContent = '내 운동 기록 ' + r.total + '개'; },
+      });
   }
 
   function listItem(w, withAuthor) {
@@ -720,28 +663,79 @@
     return row;
   }
 
-  // 목록 + '더 보기'. load(page) 는 { ok, items, hasMore } 를 돌려줌
-  function pagedList(box, load, render, emptyText, seq) {
+  // Page 응답(content, last, totalPages, totalElements)을 목록 공통 형태로 바꿈
+  const pageResult = (r) => ({
+    ok: r.ok,
+    items: r.ok ? r.data.content : [],
+    hasMore: r.ok && !r.data.last,
+    totalPages: r.ok ? r.data.totalPages : null,
+    total: r.ok ? r.data.totalElements : 0,
+  });
+
+  // 목록 + 가운데 정렬 페이지 번호. load(page) 는 { ok, items, hasMore, totalPages? } 를 돌려줌
+  // 전체 페이지 수를 모르는 배열 응답은 지금까지 확인한 페이지(+다음 페이지)까지만 번호로 보여 줌
+  function pagedList(box, load, render, emptyText, seq, opts = {}) {
     const list = el('div');
-    const moreWrap = el('div', 'more');
-    const more = el('button', 'btn-link', '더 보기');
-    moreWrap.appendChild(more);
-    moreWrap.hidden = true;
-    box.append(list, moreWrap);
-    let page = 0;
-    async function next() {
-      more.disabled = true;
+    const pager = el('div', 'pager');
+    pager.setAttribute('role', 'navigation');
+    pager.setAttribute('aria-label', '페이지');
+    pager.hidden = true;
+    box.append(list, pager);
+    let known = 1;
+    let busy = false;
+
+    async function go(page, scroll) {
+      if (busy) return;
+      busy = true;
+      pager.querySelectorAll('button').forEach((b) => { b.disabled = true; });
       const r = await load(page);
+      busy = false;
       if (seq !== viewSeq) return;
-      more.disabled = false;
-      if (!r.ok) return list.appendChild(el('div', 'empty', '불러오지 못했어요.'));
-      if (page === 0 && r.items.length === 0) list.appendChild(el('div', 'empty', emptyText));
+      list.replaceChildren();
+      if (!r.ok) {
+        list.appendChild(el('div', 'empty', opts.errorText || '불러오지 못했어요.'));
+        pager.hidden = true;
+        return;
+      }
+      if (opts.onLoad) opts.onLoad(r, page);
+      if (r.items.length === 0) list.appendChild(el('div', 'empty', page === 0 ? emptyText : '이 페이지에는 항목이 없어요.'));
       r.items.forEach((item) => list.appendChild(render(item)));
-      moreWrap.hidden = !r.hasMore;
-      page++;
+      known = r.totalPages != null ? r.totalPages : Math.max(known, page + (r.hasMore ? 2 : 1));
+      renderPager(page, r.hasMore);
+      // 목록을 바꾼 뒤 목록 맨 위로 바로 이동 (고정 헤더 높이만큼 여유를 둠)
+      if (scroll) window.scrollTo(0, Math.max(0, box.getBoundingClientRect().top + window.scrollY - 132));
     }
-    more.onclick = next;
-    next();
+
+    function renderPager(page, hasMore) {
+      pager.replaceChildren();
+      pager.hidden = known <= 1;
+      if (pager.hidden) return;
+      const button = (label, target, className) => {
+        const b = el('button', className, label);
+        b.type = 'button';
+        b.onclick = () => go(target, true);
+        return b;
+      };
+      const prev = button('이전', page - 1, 'step');
+      prev.disabled = page === 0;
+      pager.appendChild(prev);
+      // 현재 페이지를 가운데에 두고 번호는 최대 5개
+      const start = Math.max(0, Math.min(page - 2, known - 5));
+      const end = Math.min(known, start + 5);
+      for (let p = start; p < end; p++) {
+        const b = button(String(p + 1), p);
+        if (p === page) {
+          b.setAttribute('aria-current', 'page');
+          b.onclick = null;
+        }
+        pager.appendChild(b);
+      }
+      const next = button('다음', page + 1, 'step');
+      next.disabled = !hasMore;
+      pager.appendChild(next);
+    }
+
+    go(0, false);
   }
 
   // 사람 찾기 (q 없으면 전체). 배열 응답
@@ -803,10 +797,8 @@
     const box = el('section');
     box.appendChild(el('div', 'section-title', pf.me ? '내 운동 기록' : pf.nickname + '님의 운동 기록'));
     v.appendChild(box);
-    pagedList(box, async (page) => {
-      const res = await api('GET', '/users/' + id + '/workouts?page=' + page);
-      return { ok: res.ok, items: res.ok ? res.data.content : [], hasMore: res.ok && !res.data.last };
-    }, (w) => listItem(w), '아직 운동 기록이 없어요.', seq);
+    pagedList(box, async (page) => pageResult(await api('GET', '/users/' + id + '/workouts?page=' + page)),
+      (w) => listItem(w), '아직 운동 기록이 없어요.', seq);
   }
 
   function route() {
@@ -843,34 +835,6 @@
   window.addEventListener('hashchange', route);
 
   if (token) enter(); else logout();
-</script>
-<script>
-  // 다크/라이트 전환 버튼. 선택은 저장해 다음 방문에도 유지하고, 버튼에는 바꿀 모드를 표시함
-  (() => {
-    const root = document.documentElement;
-    const systemDark = window.matchMedia('(prefers-color-scheme: dark)');
-    const current = () => root.dataset.theme || (systemDark.matches ? 'dark' : 'light');
-    const buttons = document.querySelectorAll('[data-theme-toggle]');
-
-    function render() {
-      const dark = current() === 'dark';
-      buttons.forEach((b) => {
-        b.textContent = dark ? '라이트' : '다크';
-        b.setAttribute('aria-label', dark ? '라이트 모드로 바꾸기' : '다크 모드로 바꾸기');
-        b.setAttribute('aria-pressed', String(dark));
-      });
-    }
-
-    buttons.forEach((b) => b.addEventListener('click', () => {
-      const next = current() === 'dark' ? 'light' : 'dark';
-      root.dataset.theme = next;
-      try { localStorage.setItem('theme', next); } catch {}
-      render();
-    }));
-    // 직접 고른 적이 없으면 시스템 설정이 바뀔 때 버튼 문구도 따라감
-    systemDark.addEventListener('change', render);
-    render();
-  })();
 </script>
 </body>
 </html>
