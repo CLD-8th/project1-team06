@@ -2,9 +2,12 @@ package com.team6.app.follow;
 
 import com.team6.app.user.User;
 import com.team6.app.user.UserRepository;
+import com.team6.app.workout.Workout;
+import com.team6.app.workout.WorkoutPhotoService;
 import com.team6.app.workout.WorkoutResponse;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -22,6 +25,7 @@ public class FollowService {
 
     private final FollowRepository followRepository;
     private final UserRepository userRepository;
+    private final WorkoutPhotoService workoutPhotoService;
 
     @Transactional
     public void follow(Long followerId, Long targetId) {
@@ -52,8 +56,12 @@ public class FollowService {
         if (page < 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "page는 0 이상이어야 합니다.");
         }
-        return followRepository.findFeed(userId, PageRequest.of(page, PAGE_SIZE)).stream()
-                .map(WorkoutResponse::from)
+        List<Workout> workouts = followRepository.findFeed(userId, PageRequest.of(page, PAGE_SIZE));
+        // 사진 URL을 기록마다 따로 조회하지 않고, 이 페이지에 나온 기록들 것만 한 번에 가져옴 (A 파트)
+        Map<Long, String> photoUrls = workoutPhotoService.findPhotoUrls(
+                workouts.stream().map(Workout::getId).toList());
+        return workouts.stream()
+                .map(w -> WorkoutResponse.from(w, photoUrls.get(w.getId())))
                 .toList();
     }
 
