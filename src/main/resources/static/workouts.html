@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>오운공 - 운동 기록</title>
+<style>
+  :root {
+    --bg: #fafafa; --card: #fff; --text: #262626; --sub: #8e8e8e;
+    --line: #dbdbdb; --accent: #0095f6; --accent-dark: #1877f2; --danger: #ed4956;
+    --cardio: #e8f3ff; --cardio-text: #1a5fb4; --strength: #fff1e6; --strength-text: #b5470b;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; font-size: 14px; }
+  a { color: inherit; text-decoration: none; }
+  input, select, textarea, button { font-family: inherit; font-size: 14px; }
+
+  header { position: sticky; top: 0; z-index: 2; background: var(--card); border-bottom: 1px solid var(--line); }
+  header .inner { max-width: 600px; margin: 0 auto; padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  header .search { max-width: 600px; margin: 0 auto; padding: 0 16px 10px; }
+  header .search input { width: 100%; padding: 9px 12px; border: 0; border-radius: 8px; background: #efefef; }
+  .logo { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
+  nav { display: flex; gap: 4px; margin-left: auto; }
+  nav a { padding: 7px 12px; border-radius: 8px; font-weight: 600; color: var(--sub); white-space: nowrap; }
+  nav a.on { background: #efefef; color: var(--text); }
+
+  main { max-width: 600px; margin: 0 auto; padding: 16px 16px 48px; }
+  section { background: var(--card); border: 1px solid var(--line); border-radius: 8px; margin-bottom: 16px; }
+  .section-title { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px 6px; font-weight: 600; color: var(--sub); }
+
+  .field { width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); }
+  .field:focus { outline: 2px solid var(--accent); outline-offset: -1px; background: #fff; }
+  textarea.field { resize: vertical; min-height: 64px; }
+  label.lbl { display: block; font-size: 12px; font-weight: 600; color: var(--sub); margin: 12px 0 6px; }
+  .row { display: flex; gap: 12px; }
+  .row > * { flex: 1; min-width: 0; }
+  .form { padding: 4px 16px 16px; }
+  .hint { font-size: 12px; color: var(--sub); margin-top: 4px; }
+
+  .seg { display: flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .seg button { flex: 1; border: 0; background: #fff; padding: 9px 0; cursor: pointer; font-weight: 600; color: var(--sub); }
+  .seg button + button { border-left: 1px solid var(--line); }
+  .seg button.on { background: var(--text); color: #fff; }
+
+  .btn { border: 0; border-radius: 8px; padding: 8px 16px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: var(--accent-dark); }
+  .btn-gray { background: #efefef; color: var(--text); }
+  .btn-gray:hover { background: #dbdbdb; }
+  .btn-danger { background: #fff; color: var(--danger); border: 1px solid var(--line); }
+  .btn-link { background: none; border: 0; color: var(--accent); font-weight: 600; cursor: pointer; padding: 4px 0; }
+  .btn:disabled, .btn-link:disabled { opacity: .5; cursor: default; }
+  .btn.full { width: 100%; margin-top: 16px; padding: 10px; }
+
+  .auth { max-width: 350px; margin: 48px auto; padding: 32px 32px 24px; text-align: center; }
+  .auth .logo { display: block; font-size: 32px; margin-bottom: 24px; }
+  .auth .field { margin-bottom: 8px; }
+  .auth .switch { margin-top: 16px; color: var(--sub); }
+
+  .item { display: flex; gap: 12px; padding: 12px 16px; border-top: 1px solid var(--line); cursor: pointer; }
+  .item:first-child { border-top: 0; }
+  .item:hover { background: #fcfcfc; }
+  .item .body { flex: 1; min-width: 0; }
+  .item .kind { font-weight: 600; font-size: 15px; }
+  .item .memo { margin-top: 4px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .item .date { margin-top: 6px; color: var(--sub); font-size: 12px; }
+  .thumb { flex: none; width: 56px; height: 56px; border-radius: 6px; object-fit: cover; background: #efefef; }
+
+  .author { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-weight: 600; }
+  .avatar { flex: none; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center;
+            color: #fff; font-weight: 700; font-size: 12px; }
+  .avatar.lg { width: 40px; height: 40px; font-size: 16px; }
+  .avatar.xl { width: 80px; height: 80px; font-size: 32px; }
+  .user-row { display: flex; align-items: center; gap: 12px; padding: 10px 16px; }
+  .user-row .name { flex: 1; min-width: 0; font-weight: 600; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .profile-head { display: flex; gap: 20px; align-items: center; padding: 20px 16px; }
+  .profile-head .info { flex: 1; min-width: 0; }
+  .profile-head .top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .profile-head .nick { font-size: 20px; }
+  .stats { display: flex; gap: 18px; margin-top: 12px; }
+  .stats b { font-weight: 600; }
+  .clickable { cursor: pointer; }
+  .follow-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; margin-right: 6px; vertical-align: 1px; }
+  .badge.CARDIO { background: var(--cardio); color: var(--cardio-text); }
+  .badge.STRENGTH { background: var(--strength); color: var(--strength-text); }
+
+  .detail { padding: 16px; }
+  .detail .photo { width: 100%; max-height: 420px; object-fit: contain; background: #111; border-radius: 6px; display: block; }
+  .detail .no-photo { padding: 32px 16px; text-align: center; color: var(--sub); border: 1px dashed var(--line); border-radius: 6px; }
+  .detail dl { display: grid; grid-template-columns: 72px 1fr; gap: 10px 12px; margin: 16px 0; }
+  .detail dt { color: var(--sub); }
+  .detail dd { margin: 0; white-space: pre-wrap; word-break: break-word; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  .empty { color: var(--sub); text-align: center; padding: 24px 16px; }
+  .more { display: flex; justify-content: center; padding: 6px 16px 12px; }
+  .msg { min-height: 18px; margin-top: 10px; font-size: 13px; color: var(--danger); }
+  .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: #262626; color: #fff;
+           padding: 10px 16px; border-radius: 8px; font-size: 13px; opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 3; }
+  .toast.show { opacity: 1; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+
+<!-- 로그인 · 회원가입 -->
+<section id="auth" class="auth" hidden>
+  <span class="logo">오운공</span>
+  <input id="email" class="field" type="email" placeholder="이메일" autocomplete="username">
+  <input id="password" class="field" type="password" placeholder="비밀번호 (8자 이상)" autocomplete="current-password">
+  <input id="nickname" class="field" placeholder="닉네임" hidden>
+  <button id="submitBtn" class="btn btn-primary full" style="margin-top: 8px;">로그인</button>
+  <div id="authMsg" class="msg"></div>
+  <div class="switch"><span id="switchText">계정이 없으신가요?</span>
+    <button id="switchBtn" class="btn-link">가입하기</button></div>
+</section>
+
+<!-- 로그인 후 -->
+<div id="app" hidden>
+  <header>
+    <div class="inner">
+      <a class="logo" href="#/">오운공</a>
+      <nav>
+        <a id="navFeed" href="#/">피드</a>
+        <a id="navMe" href="#/me">내 기록</a>
+      </nav>
+      <button id="logoutBtn" class="btn btn-gray">로그아웃</button>
+    </div>
+    <div class="search"><input id="searchInput" type="search" placeholder="닉네임으로 사람 검색"></div>
+  </header>
+  <main id="view"></main>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+  const PAGE_SIZE = 20;
+  const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
+  const PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+  const TYPE_LABELS = { CARDIO: '유산소', STRENGTH: '무산소' };
+  const $ = (id) => document.getElementById(id);
+  let me = null;
+  let signupMode = false;
+  let viewSeq = 0;  // 화면을 빠르게 옮길 때 늦게 도착한 이전 응답이 새 화면을 덮지 않게 함
+
+  // 저장소 접근이 막힌 브라우저에서도 화면은 동작하게 함
+  const store = {
+    get: () => { try { return localStorage.getItem('accessToken'); } catch { return null; } },
+    set: (t) => { try { localStorage.setItem('accessToken', t); } catch {} },
+    clear: () => { try { localStorage.removeItem('accessToken'); } catch {} },
+  };
+  let token = store.get();
+
+  // 서버는 오류를 상태 코드로만 돌려주므로 화면 문구는 여기서 정함
+  const MESSAGES = {
+    login: { 401: '이메일 또는 비밀번호가 올바르지 않아요.', 400: '이메일과 비밀번호를 확인하세요.' },
+    signup: { 409: '이미 가입된 이메일이에요.', 400: '입력값을 확인하세요. (비밀번호 8자 이상, 닉네임 필수)' },
+    create: { 400: '입력값을 확인하세요.' },
+    photo: { 400: 'JPG · PNG · WEBP, 5MB 이하 사진만 올릴 수 있어요.', 403: '내 기록에만 사진을 올릴 수 있어요.', 404: '없는 기록이에요.', 413: '사진은 5MB 이하만 올릴 수 있어요.' },
+    remove: { 403: '내 기록만 삭제할 수 있어요.', 404: '이미 삭제된 기록이에요.' },
+  };
+
+  // body 가 FormData 면 Content-Type 을 브라우저가 경계값과 함께 정하도록 비워 둠
+  async function api(method, url, body) {
+    const headers = {};
+    if (token) headers['Authorization'] = 'Bearer ' + token;
+    const isForm = body instanceof FormData;
+    if (body && !isForm) headers['Content-Type'] = 'application/json';
+    const res = await fetch(url, { method, headers, body: body ? (isForm ? body : JSON.stringify(body)) : undefined });
+    if (res.status === 401 && token) {  // 토큰 만료
+      logout('로그인이 만료되었어요. 다시 로그인하세요.');
+    }
+    const data = res.status === 204 ? null : await res.json().catch(() => null);
+    return { status: res.status, ok: res.ok, data };
+  }
+
+  function toast(text) {
+    const t = $('toast');
+    t.textContent = text;
+    t.classList.add('show');
+    clearTimeout(toast.timer);
+    toast.timer = setTimeout(() => t.classList.remove('show'), 2000);
+  }
+
+  function el(tag, className, text) {
+    const e = document.createElement(tag);
+    if (className) e.className = className;
+    if (text != null) e.textContent = text;  // 사용자 입력은 textContent 로만 넣어 스크립트 삽입을 막음
+    return e;
+  }
+
+  // 사진 주소는 서버가 만든 /photos/... 만 씀
+  const safePhoto = (url) => (typeof url === 'string' && url.startsWith('/photos/') ? url : null);
+
+  function today() {
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+
+  function formatDate(s) {
+    const [y, m, d] = s.split('-').map(Number);
+    return (y === new Date().getFullYear() ? '' : y + '년 ') + m + '월 ' + d + '일';
+  }
+
+  function badge(type) {
+    return el('span', 'badge ' + type, TYPE_LABELS[type] || type);
+  }
+
+  function summary(w) {
+    return w.durationMin + '분' + (w.distanceKm != null ? ' · ' + Number(w.distanceKm) + 'km' : '');
+  }
+
+  // 사진 파일을 서버에 보내기 전에 한 번 거름. 통과하면 null
+  function checkPhoto(file) {
+    if (!PHOTO_TYPES.includes(file.type)) return 'JPG · PNG · WEBP 사진만 올릴 수 있어요.';
+    if (file.size > MAX_PHOTO_BYTES) return '사진은 5MB 이하만 올릴 수 있어요.';
+    return null;
+  }
+
+  async function uploadPhoto(workoutId, file) {
+    const form = new FormData();
+    form.append('photo', file);
+    return api('POST', '/workouts/' + workoutId + '/photos', form);
+  }
+
+  // ---------- 로그인 ----------
+
+  function setSignupMode(on) {
+    signupMode = on;
+    $('nickname').hidden = !on;
+    $('submitBtn').textContent = on ? '가입하기' : '로그인';
+    $('switchText').textContent = on ? '계정이 있으신가요?' : '계정이 없으신가요?';
+    $('switchBtn').textContent = on ? '로그인' : '가입하기';
+    $('authMsg').textContent = '';
+  }
+
+  async function submitAuth() {
+    const email = $('email').value, password = $('password').value;
+    if (signupMode) {
+      const r = await api('POST', '/auth/signup', { email, password, nickname: $('nickname').value });
+      if (!r.ok) return ($('authMsg').textContent = MESSAGES.signup[r.status] || '가입 실패 (' + r.status + ')');
+    }
+    const r = await api('POST', '/auth/login', { email, password });
+    if (!r.ok) return ($('authMsg').textContent = MESSAGES.login[r.status] || '로그인 실패 (' + r.status + ')');
+    token = r.data.accessToken;
+    store.set(token);
+    setSignupMode(false);
+    enter();
+  }
+
+  function logout(reason) {
+    token = null;
+    me = null;
+    store.clear();
+    $('app').hidden = true;
+    $('auth').hidden = false;
+    $('authMsg').textContent = reason || '';
+  }
+
+  async function enter() {
+    const r = await api('GET', '/users/me');
+    if (!r.ok) return logout();
+    me = r.data;
+    $('auth').hidden = true;
+    $('app').hidden = false;
+    route();
+  }
+
+  // ---------- 화면 ----------
+
+  function newView() {
+    viewSeq++;
+    const v = $('view');
+    v.replaceChildren();
+    window.scrollTo(0, 0);
+    return { v, seq: viewSeq };
+  }
+
+  // 관심 피드 (10. 팔로우한 사람들 기록 최신순 20개씩, 배열 응답)
+  function feedView() {
+    const { v, seq } = newView();
+    const box = el('section');
+    box.appendChild(el('div', 'section-title', '관심 피드'));
+    const list = el('div');
+    const moreWrap = el('div', 'more');
+    const more = el('button', 'btn-link', '더 보기');
+    moreWrap.appendChild(more);
+    moreWrap.hidden = true;
+    box.append(list, moreWrap);
+    v.appendChild(box);
+
+    let page = 0;
+    async function load() {
+      more.disabled = true;
+      const r = await api('GET', '/feed?page=' + page);
+      if (seq !== viewSeq) return;
+      more.disabled = false;
+      if (!r.ok) {
+        list.appendChild(el('div', 'empty', '피드를 불러오지 못했어요.'));
+        return;
+      }
+      if (page === 0 && r.data.length === 0) {
+        list.appendChild(el('div', 'empty', '아직 관심 피드가 비어 있어요. 위에서 닉네임을 검색해 팔로우해 보세요.'));
+        suggestUsers(v, seq);
+      }
+      r.data.forEach((w) => list.appendChild(listItem(w, true)));
+      moreWrap.hidden = r.data.length < PAGE_SIZE;
+      page++;
+    }
+    more.onclick = load;
+    load();
+  }
+
+  // 사진이 없으므로 닉네임 첫 글자 + id별 고정 색으로 프로필 이미지를 대신함
+  const COLORS = ['#f58529', '#dd2a7b', '#8134af', '#515bd4', '#1a7f37', '#e1306c', '#0095f6', '#c13584'];
+  function avatar(id, nickname) {
+    const a = el('div', 'avatar', (nickname || '?').charAt(0).toUpperCase());
+    a.style.background = COLORS[id % COLORS.length];
+    return a;
+  }
+
+  // 내 기록: [+ 기록하기]를 누르면 등록 폼이 열리고, 아래에 내 기록 목록
+  function myView(openForm) {
+    const { v, seq } = newView();
+    const form = createForm();
+    form.hidden = !openForm;
+    v.appendChild(form);
+
+    const box = el('section');
+    const title = el('div', 'section-title');
+    const count = el('span', null, '내 운동 기록');
+    const toggle = el('button', 'btn btn-primary');
+    const renderToggle = () => {
+      toggle.textContent = form.hidden ? '+ 기록하기' : '닫기';
+      toggle.className = 'btn ' + (form.hidden ? 'btn-primary' : 'btn-gray');
+    };
+    toggle.onclick = () => {
+      form.hidden = !form.hidden;
+      renderToggle();
+      if (!form.hidden) {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        form.querySelector('#fDuration').focus();
+      }
+    };
+    renderToggle();
+    title.append(count, toggle);
+    box.appendChild(title);
+    const list = el('div');
+    const moreWrap = el('div', 'more');
+    const more = el('button', 'btn-link', '더 보기');
+    moreWrap.appendChild(more);
+    moreWrap.hidden = true;
+    box.append(list, moreWrap);
+    v.appendChild(box);
+
+    // 6. 특정 사용자 기록 목록 (Page 응답: content, last, totalElements)
+    let page = 0;
+    async function load() {
+      more.disabled = true;
+      const r = await api('GET', '/users/' + me.id + '/workouts?page=' + page);
+      if (seq !== viewSeq) return;
+      more.disabled = false;
+      if (!r.ok) {
+        list.appendChild(el('div', 'empty', '기록을 불러오지 못했어요.'));
+        return;
+      }
+      count.textContent = '내 운동 기록 ' + r.data.totalElements + '개';
+      if (page === 0 && r.data.content.length === 0) {
+        list.appendChild(el('div', 'empty', '아직 기록이 없어요. [+ 기록하기]로 첫 운동을 기록해 보세요.'));
+      }
+      r.data.content.forEach((w) => list.appendChild(listItem(w)));
+      moreWrap.hidden = r.data.last;
+      page++;
+    }
+    more.onclick = load;
+    load();
+  }
+
+  function listItem(w, withAuthor) {
+    const item = el('div', 'item');
+    item.onclick = () => { location.hash = '#/workouts/' + w.id; };
+    const body = el('div', 'body');
+    if (withAuthor) {
+      const author = el('div', 'author clickable');
+      author.append(avatar(w.userId, w.nickname), w.nickname);
+      author.onclick = (e) => { e.stopPropagation(); goProfile(w.userId); };
+      body.appendChild(author);
+    }
+    const kind = el('div', 'kind');
+    kind.append(badge(w.type), summary(w));
+    body.appendChild(kind);
+    if (w.memo) body.appendChild(el('div', 'memo', w.memo));
+    body.appendChild(el('div', 'date', formatDate(w.workoutDate)));
+    item.appendChild(body);
+    const photo = safePhoto(w.photoUrl);
+    if (photo) {
+      const img = el('img', 'thumb');
+      img.src = photo;
+      img.alt = '인증 사진';
+      img.loading = 'lazy';
+      item.appendChild(img);
+    }
+    return item;
+  }
+
+  // 4. 기록 등록 (+ 13. 사진은 등록 뒤 이어서 올림)
+  function createForm() {
+    const box = el('section');
+    box.appendChild(el('div', 'section-title', '운동 기록하기'));
+    const f = el('div', 'form');
+    f.innerHTML = `
+      <label class="lbl">종류</label>
+      <div class="seg" id="typeSeg">
+        <button type="button" data-type="CARDIO" class="on">유산소</button>
+        <button type="button" data-type="STRENGTH">무산소</button>
+      </div>
+      <div class="row">
+        <div><label class="lbl" for="fDuration">운동 시간 (분)</label>
+          <input id="fDuration" class="field" type="number" min="1" max="300" placeholder="1~300"></div>
+        <div id="distanceWrap"><label class="lbl" for="fDistance">거리 (km, 선택)</label>
+          <input id="fDistance" class="field" type="number" min="0.01" step="0.01" placeholder="예: 5.2"></div>
+      </div>
+      <label class="lbl" for="fDate">날짜</label>
+      <input id="fDate" class="field" type="date">
+      <label class="lbl" for="fMemo">메모 (선택)</label>
+      <textarea id="fMemo" class="field" maxlength="500" placeholder="오늘 운동은 어땠나요?"></textarea>
+      <div class="hint"><span id="memoCount">0</span> / 500</div>
+      <label class="lbl" for="fPhoto">인증 사진 (선택)</label>
+      <input id="fPhoto" type="file" accept="image/jpeg,image/png,image/webp">
+      <div class="hint">JPG · PNG · WEBP, 5MB 이하</div>
+      <button id="fSubmit" class="btn btn-primary full">기록하기</button>
+      <div id="fMsg" class="msg"></div>`;
+    box.appendChild(f);
+
+    let type = 'CARDIO';
+    const q = (id) => f.querySelector('#' + id);
+    q('fDate').value = today();
+    q('fDate').max = today();
+    f.querySelectorAll('#typeSeg button').forEach((b) => {
+      b.onclick = () => {
+        type = b.dataset.type;
+        f.querySelectorAll('#typeSeg button').forEach((x) => x.classList.toggle('on', x === b));
+        // 거리는 유산소일 때만 입력함
+        q('distanceWrap').style.visibility = type === 'CARDIO' ? 'visible' : 'hidden';
+        if (type !== 'CARDIO') q('fDistance').value = '';
+      };
+    });
+    q('fMemo').oninput = () => { q('memoCount').textContent = q('fMemo').value.length; };
+
+    q('fSubmit').onclick = async () => {
+      const msg = q('fMsg');
+      const duration = Number(q('fDuration').value);
+      const distanceRaw = q('fDistance').value;
+      const date = q('fDate').value;
+      const file = q('fPhoto').files[0];
+      // 서버 검증(@Min · @Max · @PastOrPresent 등)과 같은 규칙을 먼저 확인함
+      if (!Number.isInteger(duration) || duration < 1 || duration > 300) return (msg.textContent = '운동 시간은 1~300분 사이 정수로 입력하세요.');
+      if (distanceRaw && !(Number(distanceRaw) >= 0.01)) return (msg.textContent = '거리는 0.01km 이상으로 입력하세요.');
+      if (!date) return (msg.textContent = '날짜를 선택하세요.');
+      if (date > today()) return (msg.textContent = '미래 날짜는 기록할 수 없어요.');
+      if (file && checkPhoto(file)) return (msg.textContent = checkPhoto(file));
+      msg.textContent = '';
+
+      q('fSubmit').disabled = true;
+      const r = await api('POST', '/workouts', {
+        type,
+        durationMin: duration,
+        distanceKm: type === 'CARDIO' && distanceRaw ? Number(distanceRaw) : null,
+        memo: q('fMemo').value.trim() || null,
+        workoutDate: date,
+      });
+      if (!r.ok) {
+        q('fSubmit').disabled = false;
+        return (msg.textContent = MESSAGES.create[r.status] || '기록하지 못했어요. (' + r.status + ')');
+      }
+      if (file) {
+        const p = await uploadPhoto(r.data.id, file);
+        if (!p.ok) toast('기록은 저장했지만 사진을 올리지 못했어요. 상세 화면에서 다시 올려 주세요.');
+        else toast('기록했어요.');
+      } else {
+        toast('기록했어요.');
+      }
+      myView();  // 폼을 비우고 목록을 새로 불러옴
+    };
+    return box;
+  }
+
+  // 5. 기록 상세 (+ 13. 사진 첨부 · 교체, 7. 삭제)
+  async function detailView(id) {
+    const { v, seq } = newView();
+    const r = await api('GET', '/workouts/' + id);
+    if (seq !== viewSeq) return;
+    const box = el('section');
+    v.appendChild(box);
+    const back = el('button', 'btn-link', '← 뒤로');
+    back.onclick = () => (history.length > 1 ? history.back() : (location.hash = '#/'));
+    const title = el('div', 'section-title');
+    title.appendChild(back);
+    box.appendChild(title);
+    if (!r.ok) {
+      box.appendChild(el('div', 'empty', r.status === 404 ? '없는 기록이에요.' : '기록을 불러오지 못했어요.'));
+      return;
+    }
+    const w = r.data;
+    const mine = me && w.userId === me.id;
+    const d = el('div', 'detail');
+
+    // 남의 기록이면 작성자 + 팔로우 버튼 (팔로우 여부를 알려 주는 API가 없어 409를 받으면 팔로우 중으로 바꿈)
+    if (!mine) {
+      const fr = el('div', 'follow-row');
+      const author = el('div', 'author clickable');
+      author.style.marginBottom = '0';
+      author.append(avatar(w.userId, w.nickname), w.nickname);
+      author.onclick = () => goProfile(w.userId);
+      fr.appendChild(author);
+      d.appendChild(fr);
+      // 팔로우 여부는 프로필 API로 확인한 뒤 버튼을 붙임
+      api('GET', '/users/' + w.userId + '/profile').then((p) => {
+        if (seq === viewSeq && p.ok) fr.appendChild(followButton(w.userId, p.data.following));
+      });
+    }
+
+    const photo = safePhoto(w.photoUrl);
+    if (photo) {
+      const img = el('img', 'photo');
+      img.src = photo;
+      img.alt = '인증 사진';
+      d.appendChild(img);
+    } else {
+      d.appendChild(el('div', 'no-photo', '인증 사진이 없어요.'));
+    }
+
+    const dl = el('dl');
+    const row = (label, value) => {
+      const dd = el('dd');
+      dd.append(value);  // 문자열은 글자로, 요소(배지)는 그대로 들어감
+      dl.append(el('dt', null, label), dd);
+    };
+    row('종류', badge(w.type));
+    row('시간', w.durationMin + '분');
+    if (w.distanceKm != null) row('거리', Number(w.distanceKm) + 'km');
+    row('날짜', formatDate(w.workoutDate));
+    if (mine) row('작성자', w.nickname + ' (나)');
+    row('메모', w.memo || '-');
+    d.appendChild(dl);
+
+    if (mine) {
+      const actions = el('div', 'actions');
+      const file = el('input');
+      file.type = 'file';
+      file.accept = 'image/jpeg,image/png,image/webp';
+      file.hidden = true;
+      const photoBtn = el('button', 'btn btn-gray', photo ? '사진 바꾸기' : '사진 올리기');
+      photoBtn.onclick = () => file.click();
+      file.onchange = async () => {
+        const f = file.files[0];
+        if (!f) return;
+        const err = checkPhoto(f);
+        if (err) return toast(err);
+        photoBtn.disabled = true;
+        const p = await uploadPhoto(w.id, f);
+        photoBtn.disabled = false;
+        if (!p.ok) return toast(MESSAGES.photo[p.status] || '사진을 올리지 못했어요. (' + p.status + ')');
+        toast(photo ? '사진을 바꿨어요.' : '사진을 올렸어요.');
+        detailView(w.id);
+      };
+      const del = el('button', 'btn btn-danger', '삭제');
+      del.onclick = async () => {
+        if (!confirm('이 기록을 삭제할까요? 사진도 함께 삭제되고 주간 랭킹에서도 빠져요.')) return;
+        del.disabled = true;
+        const res = await api('DELETE', '/workouts/' + w.id);
+        if (!res.ok) {
+          del.disabled = false;
+          return toast(MESSAGES.remove[res.status] || '삭제하지 못했어요. (' + res.status + ')');
+        }
+        toast('삭제했어요.');
+        location.hash = '#/me';
+      };
+      actions.append(photoBtn, file, del);
+      d.appendChild(actions);
+    }
+    box.appendChild(d);
+  }
+
+  const goProfile = (id) => { location.hash = '#/users/' + id; };
+
+  // following: 지금 팔로우 중인지. onChange(following) 는 결과가 바뀐 뒤 호출됨
+  function followButton(userId, following, onChange) {
+    const btn = el('button');
+    btn.dataset.userId = userId;
+    const render = () => {
+      btn.textContent = following ? '팔로우 취소' : '팔로우';
+      btn.className = 'btn ' + (following ? 'btn-gray' : 'btn-primary');
+    };
+    render();
+    btn.onclick = async (e) => {
+      e.stopPropagation();
+      if (following && !confirm('팔로우를 취소할까요? 관심 피드에서 이 사람 기록이 빠져요.')) return;
+      btn.disabled = true;
+      const r = await api(following ? 'DELETE' : 'POST', '/users/' + userId + '/follow');
+      btn.disabled = false;
+      if (r.status === 409) {  // 다른 화면에서 이미 팔로우함
+        following = true;
+        render();
+        return toast('이미 팔로우 중이에요.');
+      }
+      if (!r.ok) return toast('처리하지 못했어요. (' + r.status + ')');
+      following = !following;
+      render();
+      // 같은 사람의 버튼이 화면에 여러 개 있으면 함께 바꿈
+      document.querySelectorAll('button[data-user-id="' + userId + '"]').forEach((b) => {
+        if (b !== btn) b.dispatchEvent(new CustomEvent('sync', { detail: following }));
+      });
+      toast(following ? '팔로우했어요. 관심 피드에 기록이 떠요.' : '팔로우를 취소했어요.');
+      if (onChange) onChange(following);
+    };
+    btn.addEventListener('sync', (e) => { following = e.detail; render(); });
+    return btn;
+  }
+
+  function userRow(u) {
+    const row = el('div', 'user-row');
+    const a = avatar(u.id, u.nickname);
+    a.classList.add('lg', 'clickable');
+    a.onclick = () => goProfile(u.id);
+    const name = el('div', 'name', u.nickname);
+    name.onclick = () => goProfile(u.id);
+    row.append(a, name, followButton(u.id, u.following));
+    return row;
+  }
+
+  // 목록 + '더 보기'. load(page) 는 { ok, items, hasMore } 를 돌려줌
+  function pagedList(box, load, render, emptyText, seq) {
+    const list = el('div');
+    const moreWrap = el('div', 'more');
+    const more = el('button', 'btn-link', '더 보기');
+    moreWrap.appendChild(more);
+    moreWrap.hidden = true;
+    box.append(list, moreWrap);
+    let page = 0;
+    async function next() {
+      more.disabled = true;
+      const r = await load(page);
+      if (seq !== viewSeq) return;
+      more.disabled = false;
+      if (!r.ok) return list.appendChild(el('div', 'empty', '불러오지 못했어요.'));
+      if (page === 0 && r.items.length === 0) list.appendChild(el('div', 'empty', emptyText));
+      r.items.forEach((item) => list.appendChild(render(item)));
+      moreWrap.hidden = !r.hasMore;
+      page++;
+    }
+    more.onclick = next;
+    next();
+  }
+
+  // 사람 찾기 (q 없으면 전체). 배열 응답
+  const loadUsers = (q) => async (page) => {
+    const r = await api('GET', '/users?page=' + page + (q ? '&q=' + encodeURIComponent(q) : ''));
+    return { ok: r.ok, items: r.ok ? r.data : [], hasMore: r.ok && r.data.length === PAGE_SIZE };
+  };
+
+  function suggestUsers(v, seq) {
+    const box = el('section');
+    box.appendChild(el('div', 'section-title', '추천 사용자'));
+    v.appendChild(box);
+    pagedList(box, loadUsers(''), userRow, '아직 다른 사용자가 없어요.', seq);
+  }
+
+  function searchView(q) {
+    const { v, seq } = newView();
+    if (document.activeElement !== $('searchInput')) $('searchInput').value = q;
+    const box = el('section');
+    box.appendChild(el('div', 'section-title', q ? "'" + q + "' 검색 결과" : '모든 사용자'));
+    v.appendChild(box);
+    pagedList(box, loadUsers(q), userRow, '일치하는 사용자가 없어요.', seq);
+  }
+
+  // 프로필: 기록 · 팔로워 · 팔로잉 수, 팔로우 버튼, 그 사람의 기록(6, Page 응답)
+  async function profileView(id) {
+    const { v, seq } = newView();
+    const r = await api('GET', '/users/' + id + '/profile');
+    if (seq !== viewSeq) return;
+    if (!r.ok) {
+      v.appendChild(el('section')).appendChild(el('div', 'empty', r.status === 404 ? '없는 사용자예요.' : '프로필을 불러오지 못했어요.'));
+      return;
+    }
+    const pf = r.data;
+    const head = el('section', 'profile-head');
+    const a = avatar(pf.id, pf.nickname);
+    a.classList.add('xl');
+    const info = el('div', 'info');
+    const top = el('div', 'top');
+    top.appendChild(el('span', 'nick', pf.nickname));
+    const followerNum = el('b', null, pf.followerCount);
+    if (pf.me) {
+      const go = el('a', 'btn btn-gray', '내 기록 관리');
+      go.href = '#/me';
+      top.appendChild(go);
+    } else {
+      top.appendChild(followButton(pf.id, pf.following, (following) => {
+        followerNum.textContent = Number(followerNum.textContent) + (following ? 1 : -1);
+      }));
+    }
+    const stats = el('div', 'stats');
+    const stat = (label, num) => { const x = el('span'); x.append(label + ' ', num); return x; };
+    stats.append(stat('기록', el('b', null, pf.workoutCount)), stat('팔로워', followerNum),
+        stat('팔로잉', el('b', null, pf.followeeCount)));
+    info.append(top, stats);
+    head.append(a, info);
+    v.appendChild(head);
+
+    const box = el('section');
+    box.appendChild(el('div', 'section-title', pf.me ? '내 운동 기록' : pf.nickname + '님의 운동 기록'));
+    v.appendChild(box);
+    pagedList(box, async (page) => {
+      const res = await api('GET', '/users/' + id + '/workouts?page=' + page);
+      return { ok: res.ok, items: res.ok ? res.data.content : [], hasMore: res.ok && !res.data.last };
+    }, (w) => listItem(w), '아직 운동 기록이 없어요.', seq);
+  }
+
+  function route() {
+    if (!me) return;
+    const h = location.hash || '#/';
+    $('navFeed').classList.toggle('on', h === '#/' || h === '#');
+    $('navMe').classList.toggle('on', h === '#/me');
+    if (!h.startsWith('#/search')) $('searchInput').value = '';
+    const m = h.match(/^#\/workouts\/(\d+)$/);
+    if (m) return detailView(Number(m[1]));
+    const u = h.match(/^#\/users\/(\d+)$/);
+    if (u) return profileView(Number(u[1]));
+    if (h.startsWith('#/search')) return searchView(new URLSearchParams(h.split('?')[1] || '').get('q') || '');
+    if (h === '#/me') return myView();
+    feedView();
+  }
+
+  // ---------- 이벤트 ----------
+
+  $('submitBtn').onclick = submitAuth;
+  $('password').onkeydown = (e) => { if (e.key === 'Enter' && !signupMode) submitAuth(); };
+  $('switchBtn').onclick = () => setSignupMode(!signupMode);
+  $('logoutBtn').onclick = () => logout();
+  let searchTimer;
+  $('searchInput').oninput = (e) => {
+    clearTimeout(searchTimer);
+    const q = e.target.value.trim();
+    searchTimer = setTimeout(() => {
+      const target = '#/search' + (q ? '?q=' + encodeURIComponent(q) : '');
+      if (location.hash !== target) location.hash = target;
+    }, 300);
+  };
+  $('searchInput').onfocus = () => { if (!location.hash.startsWith('#/search')) location.hash = '#/search'; };
+  window.addEventListener('hashchange', route);
+
+  if (token) enter(); else logout();
+</script>
+</body>
+</html>

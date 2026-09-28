@@ -40,4 +40,18 @@ public class FollowController {
                                       @AuthenticationPrincipal Jwt jwt) {
         return followService.feed(Long.valueOf(jwt.getSubject()), page);
     }
+
+    // 사람 찾기 (나를 뺀 사용자 20명씩, 팔로우 여부 포함). q가 있으면 닉네임 검색
+    @GetMapping("/users")
+    public List<UserFollowResponse> users(@RequestParam(required = false) String q,
+                                          @RequestParam(defaultValue = "0") int page,
+                                          @AuthenticationPrincipal Jwt jwt) {
+        return followService.users(Long.valueOf(jwt.getSubject()), q, page);
+    }
+
+    // 프로필 (기록 · 팔로워 · 팔로잉 수, 팔로우 여부)
+    @GetMapping("/users/{id}/profile")
+    public ProfileResponse profile(@PathVariable Long id, @AuthenticationPrincipal Jwt jwt) {
+        return followService.profile(Long.valueOf(jwt.getSubject()), id);
+    }
 }

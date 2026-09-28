@@ -88,12 +88,15 @@ curl -s -X DELETE -H "Authorization: Bearer $TOKEN" http://localhost:8080/workou
 | 팔로우 | POST | /users/{id}/follow | 필요 | 204, 자기 자신 400, 없는 사용자 404, 이미 팔로우 409 |
 | 언팔로우 | DELETE | /users/{id}/follow | 필요 | 204 (팔로우하지 않은 상대여도 204) |
 | 피드 | GET | /feed?page=0 | 필요 | 200, 팔로우한 사람들 기록 최신순 20개 (`/workouts/{id}` 응답과 같은 형태) |
+| 사람 찾기 · 검색 | GET | /users?q=닉네임&page=0 | 필요 | 200, 나를 뺀 사용자 최신 가입순 20명 `[{id, nickname, following}]` (q 생략 시 전체, 닉네임 부분 일치) |
+| 프로필 | GET | /users/{id}/profile | 필요 | 200 `{id, nickname, workoutCount, followerCount, followeeCount, following, me}`, 없는 사용자 404 |
 
 ```bash
 curl -s -X POST -H 'Authorization: Bearer <accessToken>' http://localhost:8080/users/2/follow -w '%{http_code}\n'
 curl -s -H 'Authorization: Bearer <accessToken>' 'http://localhost:8080/feed?page=0'
 ```
 
+- 화면 (오운공): http://localhost:8080/workouts.html — 관심 피드 · 사람 검색 · 프로필 · 팔로우 / 팔로우 취소 · 운동 기록 등록(사진) · 상세 · 삭제
 - `follows` 테이블의 `(follower_id, followee_id)` 유일 제약으로 중복 팔로우를 막음
 - 피드는 작성자를 함께 조회(join fetch)해 20건이어도 쿼리 1번으로 가져옴
 - `workout/Workout`, `workout/WorkoutResponse` 는 B 파트가 먼저 최소 형태로 추가했고, A 파트(운동 기록)가 사진 첨부·랭킹 연동을 붙여 확장함

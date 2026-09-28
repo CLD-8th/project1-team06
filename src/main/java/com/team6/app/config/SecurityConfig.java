@@ -44,6 +44,8 @@ public class SecurityConfig {
                         // 인증사진 정적 서빙 (workout 도메인, A파트)
                         .requestMatchers(HttpMethod.GET, "/photos/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/workouts/**", "/users/*/workouts", "/rankings/**").permitAll()
+                        // 정적 화면. 로그인은 화면 안에서 토큰으로 처리함
+                        .requestMatchers(HttpMethod.GET, "/workouts.html").permitAll()
                         .anyRequest().authenticated())
                 // Authorization: Bearer <token> 헤더를 검증하고 Jwt를 인증 주체로 등록함
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
