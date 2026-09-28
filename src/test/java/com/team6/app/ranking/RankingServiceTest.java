@@ -62,6 +62,26 @@ class RankingServiceTest {
     }
 
     @Test
+    void 기록_삭제로_점수가_남아_있으면_멤버를_유지() {
+        given(redisTemplate.opsForZSet()).willReturn(zSetOps);
+        given(zSetOps.incrementScore("ranking:weekly:2026-W40", "7", -30)).willReturn(45.0);
+
+        rankingService.subtractScore(7L, 30, LocalDate.of(2026, 10, 1));
+
+        verify(zSetOps, never()).remove(anyString(), any());
+    }
+
+    @Test
+    void 기록_삭제로_점수가_0분_이하가_되면_랭킹에서_제거() {
+        given(redisTemplate.opsForZSet()).willReturn(zSetOps);
+        given(zSetOps.incrementScore("ranking:weekly:2026-W40", "7", -45)).willReturn(0.0);
+
+        rankingService.subtractScore(7L, 45, LocalDate.of(2026, 10, 1));
+
+        verify(zSetOps).remove("ranking:weekly:2026-W40", "7");
+    }
+
+    @Test
     void TOP_N을_점수_순으로_닉네임과_함께_반환() {
         given(redisTemplate.opsForZSet()).willReturn(zSetOps);
         Set<TypedTuple<String>> tuples = new LinkedHashSet<>();

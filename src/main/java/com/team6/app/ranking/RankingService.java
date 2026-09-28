@@ -46,7 +46,12 @@ public class RankingService {
             return;
         }
         String key = WeeklyRankingKey.of(workoutDate);
-        redisTemplate.opsForZSet().incrementScore(key, String.valueOf(userId), deltaMinutes);
+        String member = String.valueOf(userId);
+        Double score = redisTemplate.opsForZSet().incrementScore(key, member, deltaMinutes);
+        // 기록을 모두 지워 0분 이하가 되면 랭킹에 "0분"으로 남지 않도록 멤버를 제거함
+        if (score != null && score <= 0) {
+            redisTemplate.opsForZSet().remove(key, member);
+        }
         redisTemplate.expireAt(key, expireAt(workoutDate));
     }
 
