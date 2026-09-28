@@ -129,8 +129,13 @@
   .rank-row.me { background: var(--accent-soft); }
   .rank-num { flex: none; width: 32px; height: 32px; display: grid; place-items: center; border-radius: 50%;
               font-weight: 800; font-size: 15px; color: var(--sub); }
-  .rank-num.top { background: var(--raised); color: var(--text); }
-  .rank-num.first { background: var(--accent); color: var(--accent-ink); }
+  /* 1~3위 메달: 금, 은, 동 (이모지 대신 CSS로 그림) */
+  .rank-num.medal { position: relative; width: 34px; height: 34px; font-size: 15px;
+                    box-shadow: inset 0 -3px 0 rgba(0, 0, 0, .18), inset 0 2px 0 rgba(255, 255, 255, .35); }
+  .rank-num.medal::after { content: ""; position: absolute; inset: 3px; border-radius: 50%; border: 1px solid rgba(255, 255, 255, .35); }
+  .rank-num.medal-1 { background: linear-gradient(145deg, #f7dc7c, #d6a624); color: #3d2c00; }
+  .rank-num.medal-2 { background: linear-gradient(145deg, #eef1f4, #aab2bb); color: #262b31; }
+  .rank-num.medal-3 { background: linear-gradient(145deg, #e8ab78, #b06a36); color: #3a1c06; }
   .rank-row .who { flex: 1; min-width: 0; }
   .rank-row .who .nick { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .bar { height: 6px; border-radius: 999px; background: var(--raised); margin-top: 8px; overflow: hidden; }
@@ -907,7 +912,8 @@
     for (const e of entries) {
       const row = el('div', 'rank-row' + (me && e.userId === me.id ? ' me' : ''));
       row.onclick = () => goProfile(e.userId);
-      const num = el('div', 'rank-num' + (e.rank === 1 ? ' top first' : e.rank <= 3 ? ' top' : ''), e.rank);
+      const num = el('div', 'rank-num' + (e.rank <= 3 ? ' medal medal-' + e.rank : ''), e.rank);
+      if (e.rank <= 3) num.setAttribute('aria-label', ['금메달', '은메달', '동메달'][e.rank - 1] + ' ' + e.rank + '위');
       const a = avatar(e.userId, e.nickname);
       a.classList.add('lg');
       const who = el('div', 'who');
